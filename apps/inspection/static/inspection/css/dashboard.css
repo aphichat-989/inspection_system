@@ -1,0 +1,203 @@
+/* Dashboard-only styles — every selector scoped under .dashboard-page */
+
+.dashboard-page {
+    --dash-primary: #0f4c81;
+    --dash-primary-dark: #0a3a63;
+    --dash-accent: #2da8ff;
+    --dash-success: #10b981;
+    --dash-warning: #f59e0b;
+    --dash-danger: #ef4444;
+    --dash-bg: #f4f7fa;
+    --dash-text: #1e293b;
+    --dash-muted: #64748b;
+    --dash-border: #e2e8f0;
+    --dash-radius: 12px;
+    --dash-shadow: 0 4px 16px rgba(15, 76, 129, 0.08);
+    --dash-transition: 0.2s ease;
+}
+
+/* Page head */
+
+.dashboard-page .page-head {
+    align-items: center;
+}
+
+.dashboard-page .page-title {
+    font-size: 1.75rem;
+    color: var(--dash-text);
+}
+
+.dashboard-page .page-title::after {
+    background: linear-gradient(90deg, var(--dash-accent), var(--dash-primary));
+}
+
+.dashboard-page .page-subtitle {
+    font-size: 1rem;
+    color: var(--dash-muted);
+}
+
+/* KPI cards */
+
+.dashboard-page .kpi-card {
+    border-top-color: var(--dash-primary);
+    border-radius: var(--dash-radius);
+    box-shadow: var(--dash-shadow);
+    transition: transform var(--dash-transition), box-shadow var(--dash-transition);
+}
+
+.dashboard-page .kpi-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(15, 76, 129, 0.12);
+}
+
+.dashboard-page .kpi-card.success {
+    border-top-color: var(--dash-success);
+}
+
+.dashboard-page .kpi-card.warning {
+    border-top-color: var(--dash-warning);
+}
+
+.dashboard-page .kpi-card.danger {
+    border-top-color: var(--dash-accent);
+}
+
+.dashboard-page .kpi-card h2 {
+    font-size: 2rem;
+    color: var(--dash-text);
+}
+
+.dashboard-page .kpi-card .text-muted {
+    font-size: 1rem;
+    color: var(--dash-muted) !important;
+}
+
+.dashboard-page .kpi-icon {
+    border-radius: var(--dash-radius);
+}
+
+.dashboard-page .kpi-icon.success {
+    background: rgba(16, 185, 129, 0.12);
+    color: var(--dash-success);
+}
+
+.dashboard-page .kpi-icon.warning {
+    background: rgba(245, 158, 11, 0.12);
+    color: var(--dash-warning);
+}
+
+.dashboard-page .kpi-icon.danger {
+    background: rgba(45, 168, 255, 0.12);
+    color: var(--dash-accent);
+}
+
+/* Panels */
+
+.dashboard-page .panel {
+    border-radius: var(--dash-radius);
+    box-shadow: var(--dash-shadow);
+}
+
+.dashboard-page .panel-header h5 {
+    font-size: 1.25rem;
+    color: var(--dash-primary);
+}
+
+.dashboard-page .panel-header .text-muted {
+    font-size: 0.95rem;
+    color: var(--dash-muted) !important;
+}
+
+.dashboard-page .chip {
+    background: rgba(45, 168, 255, 0.1);
+    border-color: rgba(45, 168, 255, 0.22);
+    color: var(--dash-primary);
+    font-size: 0.875rem;
+}
+
+/* Table */
+
+.dashboard-page .table-modern thead th {
+    background: var(--dash-primary);
+    border-bottom-color: var(--dash-primary-dark);
+    font-size: 0.8125rem;
+}
+
+.dashboard-page .table-modern tbody td {
+    font-size: 0.9375rem;
+    color: var(--dash-text);
+}
+
+.dashboard-page .table-modern tbody tr:nth-child(even) {
+    --bs-table-bg: #f8fafc;
+}
+
+.dashboard-page .table-modern tbody tr:hover {
+    --bs-table-hover-bg: rgba(45, 168, 255, 0.06);
+}
+
+.dashboard-page .table-modern a {
+    color: var(--dash-primary);
+}
+
+.dashboard-page .table-modern a:hover {
+    color: var(--dash-accent);
+}
+
+/* Summary tiles */
+
+.dashboard-page .metric-tile {
+    border-radius: var(--dash-radius);
+    background: var(--dash-bg);
+}
+
+.dashboard-page .metric-tile .text-muted {
+    font-size: 0.875rem;
+    color: var(--dash-muted) !important;
+}
+
+.dashboard-page .metric-tile .h4 {
+    font-size: 1.5rem;
+    color: var(--dash-text);
+}
+
+.dashboard-page .metric-tile .fw-bold {
+    font-size: 0.9375rem;
+    color: var(--dash-text);
+}
+
+/* Primary action — scoped override, does not leak globally */
+
+.dashboard-page .page-head .btn-primary {
+    --bs-btn-bg: var(--dash-primary);
+    --bs-btn-border-color: var(--dash-primary);
+    --bs-btn-hover-bg: var(--dash-primary-dark);
+    --bs-btn-hover-border-color: var(--dash-primary-dark);
+    --bs-btn-active-bg: var(--dash-primary-dark);
+    --bs-btn-active-border-color: var(--dash-primary-dark);
+    min-height: 44px;
+    border-radius: var(--dash-radius);
+    font-size: 1rem;
+}
+
+/* iPad-friendly typography without fixed layout heights */
+
+@media (min-width: 768px) and (max-width: 1199.98px) {
+    .dashboard-page .page-title {
+        font-size: 1.5rem;
+    }
+
+    .dashboard-page .kpi-card h2 {
+        font-size: 1.75rem;
+    }
+}
+
+@media (max-width: 767.98px) {
+    .dashboard-page .page-title {
+        font-size: 1.25rem;
+    }
+
+    .dashboard-page .kpi-card h2 {
+        font-size: 1.5rem;
+    }
+}

@@ -1,57 +1,64 @@
 {% extends 'inspection/base.html' %}
+{% load static %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'inspection/css/dashboard.css' %}">
+{% endblock %}
 
 {% block content %}
-<div class="page-head">
-    <div>
-        <h3 class="page-title">Test Session Dashboard</h3>
-        <p class="page-subtitle">Overview of detection test sessions and current testing workload.</p>
+<div class="dashboard-page">
+    <div class="page-head">
+        <div>
+            <h3 class="page-title">Test Session Dashboard</h3>
+            <p class="page-subtitle">Overview of detection test sessions and current testing workload.</p>
+        </div>
+        <a href="{% url 'inspection:create' %}" class="btn btn-primary btn-lg btn-icon"><i class="bi bi-plus-circle"></i>New Test Session</a>
     </div>
-    <a href="{% url 'inspection:create' %}" class="btn btn-primary btn-lg btn-icon"><i class="bi bi-plus-circle"></i>New Test Session</a>
-</div>
 
-<div class="row g-4 mb-4">
-    <div class="col-xl-3 col-md-6"><div class="panel kpi-card p-4 h-100"><div class="d-flex justify-content-between"><div><div class="text-muted small fw-bold">Today Sessions</div><h2 class="mt-2 mb-0 fw-bold">{{ today_sessions }}</h2></div><span class="kpi-icon"><i class="bi bi-calendar-check fs-5"></i></span></div></div></div>
-    <div class="col-xl-3 col-md-6"><div class="panel kpi-card success p-4 h-100"><div class="d-flex justify-content-between"><div><div class="text-muted small fw-bold">Completed</div><h2 class="mt-2 mb-0 fw-bold">{{ completed_sessions }}</h2></div><span class="kpi-icon success"><i class="bi bi-check2-circle fs-5"></i></span></div></div></div>
-    <div class="col-xl-3 col-md-6"><div class="panel kpi-card warning p-4 h-100"><div class="d-flex justify-content-between"><div><div class="text-muted small fw-bold">Active</div><h2 class="mt-2 mb-0 fw-bold">{{ active_sessions }}</h2></div><span class="kpi-icon warning"><i class="bi bi-activity fs-5"></i></span></div></div></div>
-    <div class="col-xl-3 col-md-6"><div class="panel kpi-card danger p-4 h-100"><div class="d-flex justify-content-between"><div><div class="text-muted small fw-bold">Completion Rate</div><h2 class="mt-2 mb-0 fw-bold">{{ completion_rate }}%</h2></div><span class="kpi-icon danger"><i class="bi bi-graph-up-arrow fs-5"></i></span></div></div></div>
-</div>
+    <div class="row g-4 mb-4">
+        <div class="col-xl-3 col-md-6"><div class="panel kpi-card p-4 h-100"><div class="d-flex justify-content-between"><div><div class="text-muted small fw-bold">Today Sessions</div><h2 class="mt-2 mb-0 fw-bold">{{ today_sessions }}</h2></div><span class="kpi-icon"><i class="bi bi-calendar-check fs-5"></i></span></div></div></div>
+        <div class="col-xl-3 col-md-6"><div class="panel kpi-card success p-4 h-100"><div class="d-flex justify-content-between"><div><div class="text-muted small fw-bold">Completed</div><h2 class="mt-2 mb-0 fw-bold">{{ completed_sessions }}</h2></div><span class="kpi-icon success"><i class="bi bi-check2-circle fs-5"></i></span></div></div></div>
+        <div class="col-xl-3 col-md-6"><div class="panel kpi-card warning p-4 h-100"><div class="d-flex justify-content-between"><div><div class="text-muted small fw-bold">Active</div><h2 class="mt-2 mb-0 fw-bold">{{ active_sessions }}</h2></div><span class="kpi-icon warning"><i class="bi bi-activity fs-5"></i></span></div></div></div>
+        <div class="col-xl-3 col-md-6"><div class="panel kpi-card danger p-4 h-100"><div class="d-flex justify-content-between"><div><div class="text-muted small fw-bold">Completion Rate</div><h2 class="mt-2 mb-0 fw-bold">{{ completion_rate }}%</h2></div><span class="kpi-icon danger"><i class="bi bi-graph-up-arrow fs-5"></i></span></div></div></div>
+    </div>
 
-<div class="row g-4">
-    <div class="col-xl-8">
-        <div class="panel h-100">
-            <div class="panel-header">
-                <div><h5 class="mb-1 fw-bold">Recent Test Sessions</h5><p class="text-muted small mb-0">Latest sessions ready for testing or review</p></div>
-                <span class="chip"><i class="bi bi-database-check"></i>{{ total_sessions }} sessions</span>
-            </div>
-            <div class="table-responsive">
-                <table class="table table-modern table-hover align-middle">
-                    <thead><tr><th class="row-number">ลำดับ</th><th>Session</th><th>Date</th><th>Line</th><th>Model</th><th>Condition</th><th>Status</th></tr></thead>
-                    <tbody>
-                        {% for session in latest_sessions %}
-                        <tr>
-                            <td class="row-number">{{ forloop.counter }}</td>
-                            <td><a class="fw-bold text-decoration-none" href="{% url 'inspection:detail' session.pk %}">{{ session.session_number }}</a></td>
-                            <td>{{ session.inspection_date }}</td>
-                            <td>{{ session.line.name }}</td>
-                            <td>{{ session.product_model.name }}</td>
-                            <td><span class="chip">{{ session.test_condition.name }}</span></td>
-                            <td>{{ session.get_status_display }}</td>
-                        </tr>
-                        {% empty %}
-                        <tr><td colspan="7"><div class="empty-state"><i class="bi bi-inbox"></i><div>No test sessions available.</div></div></td></tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+    <div class="row g-4">
+        <div class="col-xl-8">
+            <div class="panel h-100">
+                <div class="panel-header">
+                    <div><h5 class="mb-1 fw-bold">Recent Test Sessions</h5><p class="text-muted small mb-0">Latest sessions ready for testing or review</p></div>
+                    <span class="chip"><i class="bi bi-database-check"></i>{{ total_sessions }} sessions</span>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-modern table-hover align-middle">
+                        <thead><tr><th class="row-number">ลำดับ</th><th>Session</th><th>Date</th><th>Line</th><th>Model</th><th>Condition</th><th>Status</th></tr></thead>
+                        <tbody>
+                            {% for session in latest_sessions %}
+                            <tr>
+                                <td class="row-number">{{ forloop.counter }}</td>
+                                <td><a class="fw-bold text-decoration-none" href="{% url 'inspection:detail' session.pk %}">{{ session.session_number }}</a></td>
+                                <td>{{ session.inspection_date }}</td>
+                                <td>{{ session.line.name }}</td>
+                                <td>{{ session.product_model.name }}</td>
+                                <td><span class="chip">{{ session.test_condition.name }}</span></td>
+                                <td>{{ session.get_status_display }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="7"><div class="empty-state"><i class="bi bi-inbox"></i><div>No test sessions available.</div></div></td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
-    </div>
-    <div class="col-xl-4">
-        <div class="panel h-100">
-            <div class="panel-header"><h5 class="mb-0 fw-bold">Session Summary</h5></div>
-            <div class="panel-body">
-                <div class="metric-tile mb-3"><div class="text-muted small">Total Sessions</div><div class="h4 mb-0 fw-bold">{{ total_sessions }}</div></div>
-                <div class="metric-tile mb-3"><div class="text-muted small">Test Items</div><div class="h4 mb-0 fw-bold">{{ total_tests }}</div></div>
-                <div class="metric-tile"><div class="text-muted small">Primary Workflow</div><div class="fw-bold">Create Session → Test Defects → Finish Summary</div></div>
+        <div class="col-xl-4">
+            <div class="panel h-100">
+                <div class="panel-header"><h5 class="mb-0 fw-bold">Session Summary</h5></div>
+                <div class="panel-body">
+                    <div class="metric-tile mb-3"><div class="text-muted small">Total Sessions</div><div class="h4 mb-0 fw-bold">{{ total_sessions }}</div></div>
+                    <div class="metric-tile mb-3"><div class="text-muted small">Test Items</div><div class="h4 mb-0 fw-bold">{{ total_tests }}</div></div>
+                    <div class="metric-tile"><div class="text-muted small">Primary Workflow</div><div class="fw-bold">Create Session → Test Defects → Finish Summary</div></div>
+                </div>
             </div>
         </div>
     </div>
