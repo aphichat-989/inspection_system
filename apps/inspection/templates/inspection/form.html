@@ -1,0 +1,238 @@
+{% extends 'inspection/base.html' %}
+
+{% block content %}
+<style>
+    .session-form-page { max-width: 1240px; margin: 0 auto; }
+    .setup-strip { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.75rem; margin-bottom: 1rem; }
+    .setup-step { background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: 0.85rem 0.95rem; display: flex; align-items: center; gap: 0.75rem; min-height: 72px; }
+    .setup-step-icon { width: 38px; height: 38px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; background: var(--blue-soft); color: var(--blue-dark); flex: 0 0 auto; }
+    .field-shell { height: 100%; background: #f8fafc; border: 1px solid #eeeeee; border-radius: 8px; padding: 0.9rem; }
+    .field-shell .form-label { display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.45rem; }
+    .required-dot { width: 0.42rem; height: 0.42rem; border-radius: 50%; background: #dc2626; display: inline-block; }
+    .defect-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap; }
+    .defect-card { position: relative; height: 100%; border: 1px solid var(--line); border-radius: 8px; background: #fff; padding: 1rem; cursor: pointer; transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease; }
+    .defect-card:hover { border-color: var(--blue); box-shadow: 0 10px 22px rgba(82,179,230,0.12); transform: translateY(-1px); }
+    .defect-card.active { border-color: var(--blue-dark); background: #f3fbff; box-shadow: 0 12px 24px rgba(82,179,230,0.16); }
+    .defect-check { width: 1.35rem; height: 1.35rem; }
+    .round-config-row { display: none; }
+    .round-config-row.active { display: flex; }
+    .round-input { max-width: 160px; min-height: 48px; font-size: 1.1rem; font-weight: 800; text-align: center; }
+    .sticky-actions { position: sticky; bottom: 0; z-index: 5; background: rgba(237,242,247,0.94); backdrop-filter: blur(8px); border-top: 1px solid var(--line); padding: 1rem 0 0; }
+    @media (max-width: 991.98px) { .setup-strip { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+    @media (max-width: 767.98px) {
+        .setup-strip { grid-template-columns: 1fr; }
+        .setup-step { min-height: 0; padding: 0.75rem; }
+        .field-shell { padding: 0.8rem; }
+        .defect-toolbar { align-items: stretch; }
+        .defect-toolbar .btn { width: 100%; justify-content: center; }
+        .defect-card { padding: 0.85rem; }
+        .round-config-row.active { align-items: stretch !important; flex-direction: column; }
+        .round-config-row .input-group { max-width: 100% !important; }
+        .round-input { max-width: none; min-width: 0; }
+    }
+    @media (max-width: 420px) {
+        .setup-step-icon { width: 34px; height: 34px; }
+        .defect-check { width: 1.15rem; height: 1.15rem; }
+    }
+</style>
+
+<div class="session-form-page">
+    <div class="page-head">
+        <div>
+            <h3 class="page-title">{% if form.instance.pk %}Edit Test Session{% else %}Create New Test Session{% endif %}</h3>
+            <p class="page-subtitle">Set the session details, select defect types, then define how many rounds each defect should run.</p>
+        </div>
+        <a href="{% url 'inspection:list' %}" class="btn btn-outline-secondary btn-lg btn-icon"><i class="bi bi-arrow-left"></i>Cancel</a>
+    </div>
+
+    <div class="setup-strip" aria-label="Test session setup steps">
+        <div class="setup-step"><span class="setup-step-icon"><i class="bi bi-clipboard2-check"></i></span><div><div class="fw-bold">1. Session</div><div class="text-muted small">Line, model, condition, inspector</div></div></div>
+        <div class="setup-step"><span class="setup-step-icon"><i class="bi bi-exclamation-diamond"></i></span><div><div class="fw-bold">2. Defects</div><div class="text-muted small">Pick active defect types</div></div></div>
+        <div class="setup-step"><span class="setup-step-icon"><i class="bi bi-repeat"></i></span><div><div class="fw-bold">3. Rounds</div><div class="text-muted small">Create execution rounds automatically</div></div></div>
+    </div>
+
+    <form method="post" id="test-session-form">
+        {% csrf_token %}
+        {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
+        {% if not has_active_inspectors %}
+        <div class="alert alert-warning d-flex justify-content-between align-items-center gap-3 flex-wrap">
+            <div><i class="bi bi-person-plus me-1"></i>No active inspectors are available. Add an inspector before starting a test session.</div>
+            <a href="{% url 'inspection:inspector_create' %}" class="btn btn-warning btn-icon"><i class="bi bi-plus-circle"></i>Add Inspector</a>
+        </div>
+        {% endif %}
+
+        <div class="factory-card mb-4">
+            <div class="factory-card-header">
+                <div>
+                    <h5 class="mb-1 fw-bold"><i class="bi bi-info-circle me-2 text-primary"></i>General Information</h5>
+                    <p class="text-muted small mb-0">Required master data must be active before it appears here.</p>
+                </div>
+                <span class="chip"><i class="bi bi-upc-scan"></i> Session Setup</span>
+            </div>
+            <div class="factory-card-body">
+                <div class="row g-3">
+                    <div class="col-md-6 col-xl-4">
+                        <div class="field-shell">
+                            <label class="form-label" for="{{ form.session_number.id_for_label }}">{{ form.session_number.label }}</label>
+                            {{ form.session_number }}
+                            <div class="form-text">Auto-generated when saved, for example TS20260702-0001.</div>
+                            {{ form.session_number.errors }}
+                        </div>
+                    </div>
+                    <div class="col-md-6 col-xl-4">
+                        <div class="field-shell">
+                            <label class="form-label" for="{{ form.inspection_date.id_for_label }}"><span class="required-dot"></span>{{ form.inspection_date.label }}</label>
+                            {{ form.inspection_date }}
+                            <div class="form-text">Use the actual factory test date, for example 2026-07-02.</div>
+                            {{ form.inspection_date.errors }}
+                        </div>
+                    </div>
+                    <div class="col-md-6 col-xl-4">
+                        <div class="field-shell">
+                            <label class="form-label" for="{{ form.line.id_for_label }}"><span class="required-dot"></span>{{ form.line.label }}</label>
+                            {{ form.line }}
+                            <div class="form-text">Example: Line A, Line 1, Final Assembly.</div>
+                            {{ form.line.errors }}
+                        </div>
+                    </div>
+                    <div class="col-md-6 col-xl-4">
+                        <div class="field-shell">
+                            <label class="form-label" for="{{ form.product_model.id_for_label }}"><span class="required-dot"></span>{{ form.product_model.label }}</label>
+                            {{ form.product_model }}
+                            <div class="form-text">Example: Model X-100, Bracket LH, Cover RH.</div>
+                            {{ form.product_model.errors }}
+                        </div>
+                    </div>
+                    <div class="col-md-6 col-xl-4">
+                        <div class="field-shell">
+                            <label class="form-label" for="{{ form.test_condition.id_for_label }}"><span class="required-dot"></span>{{ form.test_condition.label }}</label>
+                            {{ form.test_condition }}
+                            <div class="form-text">Example: Normal Light, Low Light, Oil Condition.</div>
+                            {{ form.test_condition.errors }}
+                        </div>
+                    </div>
+                    <div class="col-md-6 col-xl-4">
+                        <div class="field-shell">
+                            <label class="form-label" for="{{ form.inspector.id_for_label }}"><span class="required-dot"></span>{{ form.inspector.label }}</label>
+                            {{ form.inspector }}
+                            <div class="form-text">Example: Somchai, Inspector A, QA Line 1.</div>
+                            {{ form.inspector.errors }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="factory-card mb-4">
+            <div class="factory-card-header">
+                <div>
+                    <h5 class="mb-1 fw-bold"><i class="bi bi-exclamation-diamond me-2 text-primary"></i>Select Defects</h5>
+                    <p class="text-muted small mb-0">Each selected defect becomes one test item in the execution screen.</p>
+                </div>
+                <span class="chip"><i class="bi bi-grid-3x3-gap"></i><span id="selected-defect-count">0 selected</span></span>
+            </div>
+            <div class="factory-card-body">
+                <div class="defect-toolbar">
+                    <div class="text-muted small">Select at least one defect type. Use master data to add defects such as Spatter, Leak, Scratch, Gap, or Dent.</div>
+                    <a href="{% url 'inspection:defect_type_create' %}" class="btn btn-outline-primary btn-sm btn-icon"><i class="bi bi-plus-circle"></i>Add Defect Type</a>
+                </div>
+                <div class="row g-3">
+                    {% for item in defect_cards %}
+                    <div class="col-sm-6 col-lg-4 col-xxl-3">
+                        <label class="defect-card {% if item.selected %}active{% endif %}" data-defect-card="{{ item.defect.id }}">
+                            <div class="d-flex align-items-start gap-3">
+                                <input class="form-check-input defect-check mt-1" type="checkbox" name="defects" value="{{ item.defect.id }}" data-defect-toggle="{{ item.defect.id }}" {% if item.selected %}checked{% endif %}>
+                                <div>
+                                    <div class="fw-bold fs-5">{{ item.defect.name }}</div>
+                                    {% if item.defect.description %}<div class="text-muted small mt-1">{{ item.defect.description }}</div>{% else %}<div class="text-muted small mt-1">No description added.</div>{% endif %}
+                                </div>
+                            </div>
+                        </label>
+                    </div>
+                    {% empty %}
+                    <div class="col-12"><div class="empty-state"><i class="bi bi-inbox"></i><div class="fw-semibold mt-2">No active defect types available.</div><div class="small mt-1">Add active defect master data before creating a session.</div></div></div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <div class="factory-card mb-4">
+            <div class="factory-card-header">
+                <div>
+                    <h5 class="mb-1 fw-bold"><i class="bi bi-123 me-2 text-primary"></i>Test Configuration</h5>
+                    <p class="text-muted small mb-0">Round rows appear only for selected defects and will be created after saving.</p>
+                </div>
+                <span class="chip"><i class="bi bi-repeat"></i> Rounds Per Defect</span>
+            </div>
+            <div class="factory-card-body">
+                <div id="round-empty" class="empty-state py-4"><i class="bi bi-hand-index-thumb"></i><div class="fw-semibold mt-2">Select defects to configure test rounds.</div><div class="small mt-1">Typical values are 5, 10, 20, or 50 rounds depending on validation depth.</div></div>
+                <div class="vstack gap-3">
+                    {% for item in defect_cards %}
+                    <div class="round-config-row align-items-center justify-content-between gap-3 p-3 border rounded-2 bg-light" data-round-row="{{ item.defect.id }}">
+                        <div>
+                            <div class="fw-bold fs-5">{{ item.defect.name }}</div>
+                            <div class="text-muted small">Number of execution rounds for this defect. Minimum is 1.</div>
+                        </div>
+                        <div class="input-group input-group-lg" style="max-width: 240px;">
+                            <button class="btn btn-outline-secondary round-step" type="button" data-step="-1" data-target="rounds_{{ item.defect.id }}" aria-label="Decrease rounds for {{ item.defect.name }}"><i class="bi bi-dash-lg"></i></button>
+                            <input type="number" class="form-control round-input" id="rounds_{{ item.defect.id }}" name="rounds_{{ item.defect.id }}" min="1" value="{{ item.rounds|default:1 }}" aria-label="Rounds for {{ item.defect.name }}">
+                            <button class="btn btn-outline-secondary round-step" type="button" data-step="1" data-target="rounds_{{ item.defect.id }}" aria-label="Increase rounds for {{ item.defect.name }}"><i class="bi bi-plus-lg"></i></button>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <div class="factory-card mb-4">
+            <div class="factory-card-header">
+                <div>
+                    <h5 class="mb-1 fw-bold"><i class="bi bi-chat-left-text me-2 text-primary"></i>Overall Comment</h5>
+                    <p class="text-muted small mb-0">Optional notes shared across all defect tests in this session.</p>
+                </div>
+            </div>
+            <div class="factory-card-body">
+                {{ form.overall_comment }}
+                <div class="form-text">Example: camera exposure adjusted to 65, jig V2 used, normal factory lighting.</div>
+                {{ form.overall_comment.errors }}
+            </div>
+        </div>
+
+        <div class="sticky-actions d-flex justify-content-end gap-3">
+            <a href="{% url 'inspection:list' %}" class="btn btn-outline-secondary btn-lg touch-button px-4"><i class="bi bi-x-lg me-1"></i>Cancel</a>
+            <button type="submit" class="btn btn-primary btn-lg touch-button px-4"><i class="bi {% if form.instance.pk %}bi-save{% else %}bi-play-circle{% endif %} me-1"></i>{% if form.instance.pk %}Save Changes{% else %}Start Testing{% endif %}</button>
+        </div>
+    </form>
+</div>
+
+<script>
+    (function () {
+        const toggles = Array.from(document.querySelectorAll("[data-defect-toggle]"));
+        const roundEmpty = document.getElementById("round-empty");
+        const selectedCount = document.getElementById("selected-defect-count");
+        function syncDefectUi() {
+            let activeCount = 0;
+            toggles.forEach((toggle) => {
+                const id = toggle.dataset.defectToggle;
+                const card = document.querySelector(`[data-defect-card="${id}"]`);
+                const row = document.querySelector(`[data-round-row="${id}"]`);
+                if (card) { card.classList.toggle("active", toggle.checked); }
+                if (row) { row.classList.toggle("active", toggle.checked); }
+                if (toggle.checked) { activeCount += 1; }
+            });
+            if (roundEmpty) { roundEmpty.classList.toggle("d-none", activeCount > 0); }
+            if (selectedCount) { selectedCount.textContent = window.uiTranslate ? window.uiTranslate(`${activeCount} selected`) : `${activeCount} selected`; }
+        }
+        toggles.forEach((toggle) => toggle.addEventListener("change", syncDefectUi));
+        document.querySelectorAll(".round-step").forEach((button) => {
+            button.addEventListener("click", () => {
+                const input = document.getElementById(button.dataset.target);
+                const step = Number(button.dataset.step || 0);
+                if (!input) { return; }
+                input.value = Math.max(1, Number(input.value || 1) + step);
+            });
+        });
+        syncDefectUi();
+    })();
+</script>
+{% endblock %}

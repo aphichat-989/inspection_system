@@ -1,0 +1,84 @@
+{% extends 'inspection/base.html' %}
+
+{% block content %}
+<style>
+    .master-form-page { max-width: 980px; margin: 0 auto; }
+    .master-form-grid { display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: 1rem; align-items: start; }
+    .master-help-panel { background: #f8fafc; border: 1px solid var(--line); border-radius: 8px; padding: 1rem; }
+    .master-help-item { display: flex; gap: 0.7rem; padding: 0.8rem 0; border-bottom: 1px solid #eeeeee; }
+    .master-help-item:last-child { border-bottom: 0; padding-bottom: 0; }
+    .master-help-icon { width: 34px; height: 34px; border-radius: 8px; background: var(--blue-soft); color: var(--blue-dark); display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; }
+    .master-field { background: #fff; border: 1px solid #eeeeee; border-radius: 8px; padding: 0.95rem; }
+    .status-tile { background: #f8fafc; border: 1px solid var(--line); border-radius: 8px; padding: 1rem; }
+    @media (max-width: 991.98px) { .master-form-grid { grid-template-columns: 1fr; } }
+</style>
+
+<div class="master-form-page">
+    <div class="page-head">
+        <div>
+            <h3 class="page-title">{{ page_title }}</h3>
+            <p class="page-subtitle">Maintain the active choices used when creating Test Sessions.</p>
+        </div>
+        <a href="{% url 'inspection:dashboard' %}" class="btn btn-outline-secondary btn-icon"><i class="bi bi-arrow-left"></i> กลับ Dashboard</a>
+    </div>
+
+    <div class="master-form-grid">
+        <div class="panel">
+            <div class="panel-header">
+                <div>
+                    <h5 class="mb-1 fw-bold">{% if is_update %}Edit master data{% else %}New master data{% endif %}</h5>
+                    <p class="text-muted small mb-0">Name is required. Description and active status help operators choose the correct value.</p>
+                </div>
+                <span class="chip"><i class="bi bi-sliders"></i> Config</span>
+            </div>
+            <div class="panel-body">
+                <form method="post">
+                    {% csrf_token %}
+                    {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
+                    <div class="master-field mb-3">
+                        <label class="form-label" for="{{ form.name.id_for_label }}">{{ form.name.label }}</label>
+                        {{ form.name }}
+                        {% if name_help %}<div class="form-text">{{ name_help }}</div>{% endif %}
+                        {{ form.name.errors }}
+                    </div>
+                    <div class="master-field mb-3">
+                        <label class="form-label" for="{{ form.description.id_for_label }}">{{ form.description.label }}</label>
+                        {{ form.description }}
+                        {% if description_help %}<div class="form-text">{{ description_help }}</div>{% endif %}
+                        {{ form.description.errors }}
+                    </div>
+                    <div class="status-tile mb-4">
+                        <div class="form-check form-switch">
+                            {{ form.is_active }}
+                            <label class="form-check-label fw-bold" for="{{ form.is_active.id_for_label }}">{{ form.is_active.label }}</label>
+                        </div>
+                        {% if active_help %}<div class="form-text">{{ active_help }}</div>{% endif %}
+                        {{ form.is_active.errors }}
+                    </div>
+                    <div class="d-flex justify-content-end gap-2 flex-wrap">
+                        <a href="{% url 'inspection:dashboard' %}" class="btn btn-outline-secondary">ยกเลิก</a>
+                        <button type="submit" class="btn btn-primary btn-icon"><i class="bi bi-save"></i> บันทึกข้อมูล</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <aside class="master-help-panel">
+            <div class="fw-bold mb-1"><i class="bi bi-lightbulb me-1 text-primary"></i>Factory examples</div>
+            <p class="text-muted small mb-2">Use short, consistent names so operators can scan dropdowns quickly.</p>
+            <div class="master-help-item">
+                <span class="master-help-icon"><i class="bi bi-type"></i></span>
+                <div><div class="fw-bold small">Name</div><div class="text-muted small">Line A, Model X-100, Spatter, Normal Light, Inspector A.</div></div>
+            </div>
+            <div class="master-help-item">
+                <span class="master-help-icon"><i class="bi bi-card-text"></i></span>
+                <div><div class="fw-bold small">Description</div><div class="text-muted small">Add where or when this value should be used, such as day shift or final assembly.</div></div>
+            </div>
+            <div class="master-help-item">
+                <span class="master-help-icon"><i class="bi bi-toggle-on"></i></span>
+                <div><div class="fw-bold small">Active</div><div class="text-muted small">Active records appear in Test Session dropdowns and defect selection.</div></div>
+            </div>
+        </aside>
+    </div>
+</div>
+{% endblock %}

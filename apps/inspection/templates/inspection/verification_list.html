@@ -1,0 +1,11 @@
+{% extends 'inspection/base.html' %}
+
+{% block content %}
+<div class="panel">
+    <div class="panel-body empty-state">
+        <i class="bi bi-arrow-repeat"></i>
+        <div class="fw-semibold mt-2">This module now uses Test Sessions only.</div>
+        <a href="{% url 'inspection:list' %}" class="btn btn-primary btn-lg mt-3">Go to Test Sessions</a>
+    </div>
+</div>
+{% endblock %}

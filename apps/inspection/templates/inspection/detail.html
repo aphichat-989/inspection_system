@@ -1,0 +1,202 @@
+{% extends 'inspection/base.html' %}
+
+{% block content %}
+<style>
+    .session-header-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 0.75rem; }
+    .round-result-btn { min-width: 128px; min-height: 48px; font-weight: 800; }
+    .round-card-row { border: 1px solid #dbe3ef; border-radius: 8px; padding: 1rem; background: #fff; }
+    .summary-sidebar { position: sticky; top: 1rem; }
+    .rate-number { font-size: 2.25rem; font-weight: 900; color: #2563eb; }
+    .summary-defect-card { border: 1px solid #dbe3ef; border-radius: 8px; background: #fff; box-shadow: 0 10px 24px rgba(15,23,42,0.05); }
+    @media (max-width: 1199.98px) { .session-header-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } .summary-sidebar { position: static; } }
+    @media (max-width: 767.98px) {
+        .session-header-grid { grid-template-columns: 1fr; }
+        .round-card-row { padding: 0.85rem; }
+        .round-result-btn { width: 100%; min-width: 0; }
+        .round-card-row .d-flex.gap-2 { flex-direction: column; }
+        .rate-number { font-size: 1.8rem; }
+        .summary-defect-card { padding: 0.9rem !important; }
+        #testing-form > .row { --bs-gutter-y: 1rem; }
+        #testing-form .d-flex.justify-content-between.gap-3.mt-4 { flex-direction: column; }
+        #testing-form .d-flex.justify-content-between.gap-3.mt-4 > .d-flex { flex-direction: column; }
+        #testing-form .d-flex.justify-content-between.gap-3.mt-4 .btn { width: 100%; justify-content: center; }
+    }
+    @media (max-width: 420px) {
+        .round-card-row .fs-5 { font-size: 1rem !important; }
+        .summary-defect-card h4, .factory-card-header h3 { font-size: 1.1rem; }
+    }
+</style>
+
+<div class="page-head">
+    <div>
+        <h3 class="page-title">{% if show_summary %}Session Summary{% else %}Testing Screen{% endif %}</h3>
+        <p class="page-subtitle">{{ session.session_number }}</p>
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+        <a href="{% url 'inspection:list' %}" class="btn btn-outline-secondary btn-lg btn-icon"><i class="bi bi-arrow-left"></i>Sessions</a>
+        <a href="{% url 'inspection:update' session.pk %}" class="btn btn-outline-warning btn-lg btn-icon"><i class="bi bi-pencil"></i>Edit Setup</a>
+    </div>
+</div>
+
+<div class="factory-card mb-4">
+    <div class="factory-card-body">
+        <div class="session-header-grid">
+            <div class="metric-tile"><div class="text-muted small">Session Number</div><div class="fw-bold">{{ session.session_number }}</div></div>
+            <div class="metric-tile"><div class="text-muted small">Date</div><div class="fw-bold">{{ session.inspection_date }}</div></div>
+            <div class="metric-tile"><div class="text-muted small">Line</div><div class="fw-bold">{{ session.line.name }}</div></div>
+            <div class="metric-tile"><div class="text-muted small">Model</div><div class="fw-bold">{{ session.product_model.name }}</div></div>
+            <div class="metric-tile"><div class="text-muted small">Condition</div><div class="fw-bold">{{ session.test_condition.name }}</div></div>
+            <div class="metric-tile"><div class="text-muted small">Inspector</div><div class="fw-bold">{{ session.inspector.name }}</div></div>
+        </div>
+        {% if not show_summary %}
+        <div class="mt-4">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="fw-bold">Defect {{ display_index }} of {{ total_tests }}</span>
+                <span class="chip"><i class="bi bi-bar-chart-steps"></i>{{ progress_percent }}%</span>
+            </div>
+            <div class="progress" style="height: 14px;"><div class="progress-bar" style="width: {{ progress_percent }}%"></div></div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% if show_summary %}
+<div class="row g-4">
+    <div class="col-xl-8">
+        <div class="vstack gap-3">
+            {% for item in summaries %}
+            <div class="summary-defect-card p-4">
+                <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-3">
+                    <h4 class="fw-bold mb-0">{{ item.test.defect_type.name|default:item.test.test_name }}</h4>
+                    <span class="chip"><i class="bi bi-repeat"></i>{{ item.total_rounds }} rounds</span>
+                </div>
+                <div class="row g-3">
+                    <div class="col-md-4"><div class="metric-tile"><div class="text-muted small">Found</div><div class="h3 mb-0 fw-bold text-success">{{ item.found }}</div></div></div>
+                    <div class="col-md-4"><div class="metric-tile"><div class="text-muted small">Not Found</div><div class="h3 mb-0 fw-bold text-danger">{{ item.not_found }}</div></div></div>
+                    <div class="col-md-4"><div class="metric-tile"><div class="text-muted small">Detection Rate</div><div class="h3 mb-0 fw-bold text-primary">{{ item.detection_rate }}%</div></div></div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="empty-state"><i class="bi bi-inbox"></i><div>No tests configured for this session.</div></div>
+            {% endfor %}
+        </div>
+    </div>
+    <div class="col-xl-4">
+        <div class="factory-card summary-sidebar">
+            <div class="factory-card-header"><h5 class="mb-0 fw-bold">Overall Comment</h5></div>
+            <div class="factory-card-body">
+                <div class="text-muted mb-4">{{ session.overall_comment|default:'-' }}</div>
+                <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="finish">
+                    <button type="submit" class="btn btn-success btn-lg touch-button w-100"><i class="bi bi-check2-circle me-1"></i>Finish Session</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% else %}
+<form method="post" id="testing-form">
+    {% csrf_token %}
+    <input type="hidden" name="current_index" value="{{ current_index }}">
+    {% if current_test %}<input type="hidden" name="current_test_id" value="{{ current_test.id }}">{% endif %}
+
+    <div class="row g-4">
+        <div class="col-xl-9">
+            <div class="factory-card">
+                <div class="factory-card-header">
+                    <div><div class="text-muted small fw-bold">Current Defect</div><h3 class="mb-0 fw-bold">{{ current_test.defect_type.name|default:current_test.test_name }}</h3></div>
+                    <span class="chip"><i class="bi bi-repeat"></i>{{ current_test.total_rounds }} rounds</span>
+                </div>
+                <div class="factory-card-body">
+                    <div class="vstack gap-3">
+                        {% for round in current_test.rounds.all %}
+                        <div class="round-card-row" data-round-row>
+                            <div class="row g-3 align-items-center">
+                                <div class="col-lg-2"><div class="fw-bold fs-5">Round {{ round.round_number }}</div></div>
+                                <div class="col-lg-4">
+                                    <input type="hidden" name="result_{{ round.id }}" value="{% if round.result_type_id == found_result.id %}found{% elif round.result_type_id == not_found_result.id %}not_found{% endif %}" data-result-input>
+                                    <div class="d-flex gap-2 flex-wrap">
+                                        <button type="button" class="btn btn-outline-success round-result-btn {% if round.result_type_id == found_result.id %}active{% endif %}" data-result-button="found"><i class="bi bi-check2-circle me-1"></i>Found</button>
+                                        <button type="button" class="btn btn-outline-danger round-result-btn {% if round.result_type_id == not_found_result.id %}active{% endif %}" data-result-button="not_found"><i class="bi bi-x-circle me-1"></i>Not Found</button>
+                                    </div>
+                                </div>
+                                <div class="col-lg-6"><textarea class="form-control" rows="2" name="comment_{{ round.id }}" placeholder="Comment">{{ round.comment }}</textarea></div>
+                            </div>
+                        </div>
+                        {% empty %}
+                        <div class="empty-state"><i class="bi bi-inbox"></i><div>No rounds configured.</div></div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="d-flex justify-content-between gap-3 mt-4 flex-wrap">
+                <button type="submit" name="action" value="previous" class="btn btn-outline-secondary btn-lg touch-button px-4" {% if current_index == 0 %}disabled{% endif %}><i class="bi bi-arrow-left me-1"></i>Previous Defect</button>
+                <div class="d-flex gap-3 flex-wrap">
+                    <button type="submit" name="action" value="save" class="btn btn-primary btn-lg touch-button px-4"><i class="bi bi-save me-1"></i>Save</button>
+                    {% if display_index == total_tests %}
+                    <button type="submit" name="action" value="finish" class="btn btn-success btn-lg touch-button px-4"><i class="bi bi-check2-circle me-1"></i>Finish Session</button>
+                    {% else %}
+                    <button type="submit" name="action" value="next" class="btn btn-primary btn-lg touch-button px-4">Next Defect<i class="bi bi-arrow-right ms-1"></i></button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3">
+            <div class="factory-card summary-sidebar">
+                <div class="factory-card-header"><h5 class="mb-0 fw-bold">Session Summary</h5></div>
+                <div class="factory-card-body">
+                    <div class="metric-tile mb-3"><div class="text-muted small">Current Defect</div><div class="fw-bold">{{ current_test.defect_type.name|default:current_test.test_name }}</div></div>
+                    <div class="metric-tile mb-3"><div class="text-muted small">Rounds Completed</div><div class="h4 fw-bold mb-0" id="rounds-completed">{{ current_summary.completed }}</div></div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-6"><div class="metric-tile"><div class="text-muted small">Found</div><div class="h4 fw-bold text-success mb-0" id="found-count">{{ current_summary.found }}</div></div></div>
+                        <div class="col-6"><div class="metric-tile"><div class="text-muted small">Not Found</div><div class="h4 fw-bold text-danger mb-0" id="not-found-count">{{ current_summary.not_found }}</div></div></div>
+                    </div>
+                    <div class="metric-tile text-center"><div class="text-muted small">Detection Rate</div><div class="rate-number" id="detection-rate">{{ current_summary.detection_rate }}%</div></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+<script>
+    (function () {
+        const rows = Array.from(document.querySelectorAll("[data-round-row]"));
+        const completedEl = document.getElementById("rounds-completed");
+        const foundEl = document.getElementById("found-count");
+        const notFoundEl = document.getElementById("not-found-count");
+        const rateEl = document.getElementById("detection-rate");
+        function updateSummary() {
+            let completed = 0;
+            let found = 0;
+            let notFound = 0;
+            rows.forEach((row) => {
+                const value = row.querySelector("[data-result-input]").value;
+                if (value) { completed += 1; }
+                if (value === "found") { found += 1; }
+                if (value === "not_found") { notFound += 1; }
+            });
+            const decided = found + notFound;
+            const rate = decided ? Math.round((found / decided) * 100) : 0;
+            if (completedEl) { completedEl.textContent = completed; }
+            if (foundEl) { foundEl.textContent = found; }
+            if (notFoundEl) { notFoundEl.textContent = notFound; }
+            if (rateEl) { rateEl.textContent = `${rate}%`; }
+        }
+        rows.forEach((row) => {
+            const input = row.querySelector("[data-result-input]");
+            row.querySelectorAll("[data-result-button]").forEach((button) => {
+                button.addEventListener("click", () => {
+                    input.value = button.dataset.resultButton;
+                    row.querySelectorAll("[data-result-button]").forEach((other) => other.classList.remove("active"));
+                    button.classList.add("active");
+                    updateSummary();
+                });
+            });
+        });
+        updateSummary();
+    })();
+</script>
+{% endif %}
+{% endblock %}

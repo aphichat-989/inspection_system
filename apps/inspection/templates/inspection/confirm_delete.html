@@ -1,0 +1,27 @@
+{% extends 'inspection/base.html' %}
+
+{% block content %}
+<div class="page-head">
+    <div>
+        <h3 class="page-title">Delete Test Session</h3>
+        <p class="page-subtitle">This removes the selected session and its test rounds.</p>
+    </div>
+    <a href="{% url 'inspection:list' %}" class="btn btn-outline-secondary btn-lg btn-icon"><i class="bi bi-arrow-left"></i>Back</a>
+</div>
+
+<div class="panel danger-panel">
+    <div class="panel-header"><h5 class="mb-0 fw-bold text-danger"><i class="bi bi-exclamation-triangle me-2"></i>Confirm Delete</h5></div>
+    <div class="panel-body">
+        <p class="fs-5 mb-4">Delete Test Session <strong>{{ object.session_number }}</strong>?</p>
+        <div class="metric-tile mb-4">
+            <div class="text-muted small">Session</div>
+            <div class="fw-bold">{{ object.inspection_date }} · {{ object.line.name }} · {{ object.product_model.name }}</div>
+        </div>
+        <form method="post" class="d-flex justify-content-end gap-2">
+            {% csrf_token %}
+            <a href="{% url 'inspection:list' %}" class="btn btn-outline-secondary btn-lg">Cancel</a>
+            <button type="submit" class="btn btn-danger btn-lg"><i class="bi bi-trash me-1"></i>Delete</button>
+        </form>
+    </div>
+</div>
+{% endblock %}
