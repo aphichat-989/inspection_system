@@ -1,10 +1,10 @@
-﻿from dataclasses import dataclass
+from dataclasses import dataclass
 
 from django.core.cache import cache
 from django.db import transaction
-from django.db.models import Prefetch, Q
+from django.db.models import Prefetch
 
-from ...models import DefectType, InspectionDefect, InspectionRecord, ProductModel, TestCondition
+from ...models import DefectType, InspectionDefect, InspectionRecord, TestCondition
 from ..analytics.defect_service import DefectAnalyticsService
 from ..production.line_service import ProductionLineService
 
@@ -16,7 +16,6 @@ DASHBOARD_CACHE_VERSION_KEY = "inspection:dashboard:version"
 class InspectionFilters:
     line_id: str = ""
     line_name: str = ""
-    product_model: str = ""
     test_condition_id: str = ""
     start_date: str = ""
     end_date: str = ""
@@ -26,7 +25,6 @@ class InspectionFilters:
         return cls(
             line_id=request.GET.get("line_id", "").strip(),
             line_name=request.GET.get("line_name", "").strip(),
-            product_model=request.GET.get("product_model", "").strip(),
             test_condition_id=request.GET.get("test_condition_id", "").strip(),
             start_date=request.GET.get("start_date", "").strip(),
             end_date=request.GET.get("end_date", "").strip(),
@@ -36,7 +34,6 @@ class InspectionFilters:
         return (
             self.line_id or "all-lines",
             self.line_name or "no-line-name",
-            self.product_model or "all-models",
             self.test_condition_id or "all-conditions",
             self.start_date or "open-start",
             self.end_date or "open-end",
@@ -46,15 +43,13 @@ class InspectionFilters:
 class InspectionReadService:
     @staticmethod
     def base_queryset():
-        return InspectionRecord.objects.select_related("line", "product_model", "test_condition")
+        return InspectionRecord.objects.select_related("line", "test_condition")
 
     @staticmethod
     def filtered_queryset(filters):
         queryset = InspectionReadService.base_queryset()
         queryset = ProductionLineService.apply_line_filter(queryset, filters)
 
-        if filters.product_model:
-            queryset = queryset.filter(Q(product_model__name__icontains=filters.product_model) | Q(part_name__icontains=filters.product_model) | Q(sd_code__icontains=filters.product_model))
         if filters.test_condition_id:
             queryset = queryset.filter(test_condition_id=filters.test_condition_id)
         if filters.start_date:
@@ -97,7 +92,6 @@ class InspectionReadService:
         return {
             "defect_types": defect_types,
             "test_conditions": test_conditions,
-            "product_models": ProductModel.objects.filter(is_active=True).order_by("name"),
             "production_lines": ProductionLineService.active_lines(),
             "dynamic_defect_groups": dynamic_defect_groups,
         }
@@ -143,4 +137,5 @@ class InspectionWriteService:
             cache.incr(DASHBOARD_CACHE_VERSION_KEY)
         except ValueError:
             cache.set(DASHBOARD_CACHE_VERSION_KEY, 2, None)
+
 

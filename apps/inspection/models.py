@@ -21,10 +21,6 @@ class ProductionLine(BaseMasterModel):
     pass
 
 
-class ProductModel(BaseMasterModel):
-    pass
-
-
 class DefectType(BaseMasterModel):
     pass
 
@@ -56,7 +52,6 @@ class InspectionSession(models.Model):
     session_number = models.CharField(max_length=50, unique=True, db_index=True)
     inspection_date = models.DateField(default=date.today, db_index=True)
     line = models.ForeignKey(ProductionLine, on_delete=models.PROTECT, related_name="inspection_sessions")
-    product_model = models.ForeignKey(ProductModel, on_delete=models.PROTECT, related_name="inspection_sessions")
     test_condition = models.ForeignKey(TestCondition, on_delete=models.PROTECT, related_name="inspection_sessions")
     inspector = models.ForeignKey(Inspector, on_delete=models.PROTECT, related_name="inspection_sessions")
     overall_comment = models.TextField(blank=True, default="")
@@ -67,7 +62,6 @@ class InspectionSession(models.Model):
         ordering = ["-inspection_date", "-created_at"]
         indexes = [
             models.Index(fields=["inspection_date", "line"], name="session_date_line_idx"),
-            models.Index(fields=["product_model", "inspection_date"], name="session_model_date_idx"),
             models.Index(fields=["test_condition", "inspection_date"], name="session_cond_date_idx"),
             models.Index(fields=["inspector", "inspection_date"], name="session_insp_date_idx"),
             models.Index(fields=["status", "inspection_date"], name="session_status_date_idx"),
@@ -78,6 +72,13 @@ class InspectionSession(models.Model):
 
 
 class InspectionTest(models.Model):
+    STATUS_IN_PROGRESS = "in_progress"
+    STATUS_FINISHED = "finished"
+    STATUS_CHOICES = [
+        (STATUS_IN_PROGRESS, "In Progress"),
+        (STATUS_FINISHED, "Finished"),
+    ]
+
     session = models.ForeignKey(InspectionSession, on_delete=models.CASCADE, related_name="tests")
     defect_type = models.ForeignKey(
         DefectType,
@@ -88,6 +89,9 @@ class InspectionTest(models.Model):
     )
     test_name = models.CharField(max_length=150, blank=True, default="")
     total_rounds = models.PositiveIntegerField(default=1)
+    completed_rounds = models.PositiveIntegerField(default=0)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_IN_PROGRESS, db_index=True)
+    stop_reason = models.TextField(blank=True, default="")
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -101,6 +105,7 @@ class InspectionTest(models.Model):
         indexes = [
             models.Index(fields=["session", "defect_type"], name="test_session_defect_idx"),
             models.Index(fields=["defect_type"], name="test_defect_idx"),
+            models.Index(fields=["status"], name="test_status_idx"),
         ]
 
     def __str__(self):
@@ -154,7 +159,6 @@ class InspectionRecord(models.Model):
     sd_code = models.CharField(max_length=100, blank=True, default="", db_index=True)
     part_name = models.CharField(max_length=200, blank=True, default="")
     line = models.ForeignKey(ProductionLine, on_delete=models.PROTECT, related_name="inspection_records")
-    product_model = models.ForeignKey(ProductModel, on_delete=models.PROTECT, related_name="inspection_records")
     test_condition = models.ForeignKey(TestCondition, on_delete=models.PROTECT, related_name="inspection_records")
     total_production = models.PositiveIntegerField(default=0)
     result = models.CharField(max_length=20, choices=RESULT_CHOICES, default=RESULT_PENDING, db_index=True)
@@ -178,14 +182,13 @@ class InspectionRecord(models.Model):
         indexes = [
             models.Index(fields=["inspection_date", "line"], name="insp_date_line_idx"),
             models.Index(fields=["line", "inspection_date", "inspection_time"], name="insp_line_date_time_idx"),
-            models.Index(fields=["product_model", "inspection_date"], name="insp_model_date_idx"),
             models.Index(fields=["test_condition", "inspection_date"], name="insp_cond_date_idx"),
             models.Index(fields=["sd_code", "inspection_date"], name="insp_sd_code_date_idx"),
             models.Index(fields=["result", "inspection_date"], name="insp_result_date_idx"),
         ]
 
     def __str__(self):
-        return f"{self.inspection_date} - {self.sd_code or self.product_model}"
+        return f"{self.inspection_date} - {self.sd_code or self.part_name}"
 
 
 class InspectionDefect(models.Model):
@@ -245,3 +248,5 @@ class VerificationRecord(models.Model):
 
     def __str__(self):
         return f"{self.inspection_date} - {self.defect_type} - รอบ {self.round_no}"
+
+

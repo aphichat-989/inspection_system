@@ -2,28 +2,33 @@
 
 {% block content %}
 <style>
-    .session-header-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 0.75rem; }
-    .round-result-btn { min-width: 128px; min-height: 48px; font-weight: 800; }
-    .round-card-row { border: 1px solid #dbe3ef; border-radius: 8px; padding: 1rem; background: #fff; }
+    .session-header-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 0.75rem; }
+    .round-panel { border: 1px solid #dbe3ef; border-radius: 8px; background: #fff; padding: 1.25rem; }
+    .round-result-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+    .round-result-btn { min-height: 112px; font-size: 1.3rem; font-weight: 900; border-width: 2px; }
+    .round-result-btn.active { color: #fff; }
+    .round-result-btn[data-result-button="found"].active { background: #198754; border-color: #198754; }
+    .round-result-btn[data-result-button="not_found"].active { background: #dc3545; border-color: #dc3545; }
+    .current-round-number { font-size: clamp(2.6rem, 7vw, 5rem); font-weight: 900; line-height: 1; }
     .summary-sidebar { position: sticky; top: 1rem; }
-    .rate-number { font-size: 2.25rem; font-weight: 900; color: #2563eb; }
     .summary-defect-card { border: 1px solid #dbe3ef; border-radius: 8px; background: #fff; box-shadow: 0 10px 24px rgba(15,23,42,0.05); }
+    .status-badge { display: inline-flex; align-items: center; gap: 0.35rem; border-radius: 999px; padding: 0.35rem 0.7rem; font-weight: 800; font-size: 0.85rem; }
+    .status-finished { background: #dcfce7; color: #166534; }
+    .status-active { background: #dbeafe; color: #1d4ed8; }
     @media (max-width: 1199.98px) { .session-header-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } .summary-sidebar { position: static; } }
     @media (max-width: 767.98px) {
         .session-header-grid { grid-template-columns: 1fr; }
-        .round-card-row { padding: 0.85rem; }
-        .round-result-btn { width: 100%; min-width: 0; }
-        .round-card-row .d-flex.gap-2 { flex-direction: column; }
-        .rate-number { font-size: 1.8rem; }
+        .round-panel { padding: 1rem; }
+        .round-result-grid { grid-template-columns: 1fr; }
+        .round-result-btn { min-height: 88px; width: 100%; }
         .summary-defect-card { padding: 0.9rem !important; }
         #testing-form > .row { --bs-gutter-y: 1rem; }
-        #testing-form .d-flex.justify-content-between.gap-3.mt-4 { flex-direction: column; }
-        #testing-form .d-flex.justify-content-between.gap-3.mt-4 > .d-flex { flex-direction: column; }
-        #testing-form .d-flex.justify-content-between.gap-3.mt-4 .btn { width: 100%; justify-content: center; }
+        #testing-form .action-row { flex-direction: column; }
+        #testing-form .action-row .btn { width: 100%; justify-content: center; }
     }
     @media (max-width: 420px) {
-        .round-card-row .fs-5 { font-size: 1rem !important; }
         .summary-defect-card h4, .factory-card-header h3 { font-size: 1.1rem; }
+        .round-result-btn { font-size: 1.1rem; }
     }
 </style>
 
@@ -44,17 +49,16 @@
             <div class="metric-tile"><div class="text-muted small">Session Number</div><div class="fw-bold">{{ session.session_number }}</div></div>
             <div class="metric-tile"><div class="text-muted small">Date</div><div class="fw-bold">{{ session.inspection_date }}</div></div>
             <div class="metric-tile"><div class="text-muted small">Line</div><div class="fw-bold">{{ session.line.name }}</div></div>
-            <div class="metric-tile"><div class="text-muted small">Model</div><div class="fw-bold">{{ session.product_model.name }}</div></div>
             <div class="metric-tile"><div class="text-muted small">Condition</div><div class="fw-bold">{{ session.test_condition.name }}</div></div>
             <div class="metric-tile"><div class="text-muted small">Inspector</div><div class="fw-bold">{{ session.inspector.name }}</div></div>
         </div>
-        {% if not show_summary %}
+        {% if not show_summary and current_summary %}
         <div class="mt-4">
             <div class="d-flex justify-content-between align-items-center mb-2">
-                <span class="fw-bold">Defect {{ display_index }} of {{ total_tests }}</span>
-                <span class="chip"><i class="bi bi-bar-chart-steps"></i>{{ progress_percent }}%</span>
+                <span class="fw-bold">Current Round {{ current_round_number }} / {{ current_summary.total_rounds }}</span>
+                <span class="chip"><i class="bi bi-bar-chart-steps"></i>{{ round_progress_percent }}%</span>
             </div>
-            <div class="progress" style="height: 14px;"><div class="progress-bar" style="width: {{ progress_percent }}%"></div></div>
+            <div class="progress" style="height: 14px;"><div class="progress-bar" style="width: {{ round_progress_percent }}%"></div></div>
         </div>
         {% endif %}
     </div>
@@ -68,12 +72,49 @@
             <div class="summary-defect-card p-4">
                 <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-3">
                     <h4 class="fw-bold mb-0">{{ item.test.defect_type.name|default:item.test.test_name }}</h4>
-                    <span class="chip"><i class="bi bi-repeat"></i>{{ item.total_rounds }} rounds</span>
+                    {% if item.is_finished %}
+                    <span class="status-badge status-finished"><i class="bi bi-check2-circle"></i>Finished</span>
+                    {% else %}
+                    <span class="status-badge status-active"><i class="bi bi-play-circle"></i>In Progress</span>
+                    {% endif %}
                 </div>
                 <div class="row g-3">
-                    <div class="col-md-4"><div class="metric-tile"><div class="text-muted small">Found</div><div class="h3 mb-0 fw-bold text-success">{{ item.found }}</div></div></div>
-                    <div class="col-md-4"><div class="metric-tile"><div class="text-muted small">Not Found</div><div class="h3 mb-0 fw-bold text-danger">{{ item.not_found }}</div></div></div>
-                    <div class="col-md-4"><div class="metric-tile"><div class="text-muted small">Detection Rate</div><div class="h3 mb-0 fw-bold text-primary">{{ item.detection_rate }}%</div></div></div>
+                    <div class="col-md-4"><div class="metric-tile"><div class="text-muted small">Planned Rounds</div><div class="h3 mb-0 fw-bold">{{ item.total_rounds }}</div></div></div>
+                    <div class="col-md-4"><div class="metric-tile"><div class="text-muted small">Completed Rounds</div><div class="h3 mb-0 fw-bold">{{ item.completed }}</div></div></div>
+                    <div class="col-md-4"><div class="metric-tile"><div class="text-muted small">FOUND</div><div class="h3 mb-0 fw-bold text-success">{{ item.found }}</div></div></div>
+                    <div class="col-md-4"><div class="metric-tile"><div class="text-muted small">NOT_FOUND</div><div class="h3 mb-0 fw-bold text-danger">{{ item.not_found }}</div></div></div>
+                    <div class="col-md-4"><div class="metric-tile"><div class="text-muted small">Status</div><div class="h5 mb-0 fw-bold">{% if item.is_finished %}Finished{% else %}In Progress{% endif %}</div></div></div>
+                    <div class="col-md-4"><div class="metric-tile"><div class="text-muted small">Reason</div><div class="fw-bold">{{ item.stop_reason|default:'-' }}</div></div></div>
+                </div>
+                <div class="mt-4">
+                    <div class="d-flex justify-content-between align-items-center gap-2 flex-wrap mb-2">
+                        <h5 class="mb-0 fw-bold">ประวัติรอบทดสอบ</h5>
+                        <span class="chip"><i class="bi bi-clock-history"></i>{{ item.completed }} / {{ item.total_rounds }}</span>
+                    </div>
+                    <div class="table-responsive rounded-2 border">
+                        <table class="table table-sm table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>รอบทดสอบ</th>
+                                    <th>รอบที่กำหนด</th>
+                                    <th>ผล</th>
+                                    <th>คอมเมนต์</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for round in item.test.rounds.all %}
+                                <tr>
+                                    <td class="fw-bold">Round {{ round.round_number }}</td>
+                                    <td>{{ round.round_number }} / {{ item.total_rounds }}</td>
+                                    <td>{% if round.result_type %}{{ round.result_type.name }}{% else %}-{% endif %}</td>
+                                    <td>{{ round.comment|default:'-' }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr><td colspan="4" class="text-muted text-center py-3">ยังไม่มีประวัติรอบทดสอบ</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
             {% empty %}
@@ -86,11 +127,13 @@
             <div class="factory-card-header"><h5 class="mb-0 fw-bold">Overall Comment</h5></div>
             <div class="factory-card-body">
                 <div class="text-muted mb-4">{{ session.overall_comment|default:'-' }}</div>
+                {% if session.status != 'completed' %}
                 <form method="post">
                     {% csrf_token %}
                     <input type="hidden" name="action" value="finish">
                     <button type="submit" class="btn btn-success btn-lg touch-button w-100"><i class="bi bi-check2-circle me-1"></i>Finish Session</button>
                 </form>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -98,62 +141,72 @@
 {% else %}
 <form method="post" id="testing-form">
     {% csrf_token %}
+    <input type="hidden" name="action" value="save">
     <input type="hidden" name="current_index" value="{{ current_index }}">
+    <input type="hidden" name="result" id="selected-result" value="">
     {% if current_test %}<input type="hidden" name="current_test_id" value="{{ current_test.id }}">{% endif %}
 
     <div class="row g-4">
-        <div class="col-xl-9">
+        <div class="col-xl-8">
             <div class="factory-card">
                 <div class="factory-card-header">
-                    <div><div class="text-muted small fw-bold">Current Defect</div><h3 class="mb-0 fw-bold">{{ current_test.defect_type.name|default:current_test.test_name }}</h3></div>
-                    <span class="chip"><i class="bi bi-repeat"></i>{{ current_test.total_rounds }} rounds</span>
+                    <div>
+                        <div class="text-muted small fw-bold">Current Defect</div>
+                        <h3 class="mb-0 fw-bold">{{ current_test.defect_type.name|default:current_test.test_name }}</h3>
+                    </div>
+                    <span class="status-badge status-active"><i class="bi bi-play-circle"></i>In Progress</span>
                 </div>
                 <div class="factory-card-body">
-                    <div class="vstack gap-3">
-                        {% for round in current_test.rounds.all %}
-                        <div class="round-card-row" data-round-row>
-                            <div class="row g-3 align-items-center">
-                                <div class="col-lg-2"><div class="fw-bold fs-5">Round {{ round.round_number }}</div></div>
-                                <div class="col-lg-4">
-                                    <input type="hidden" name="result_{{ round.id }}" value="{% if round.result_type_id == found_result.id %}found{% elif round.result_type_id == not_found_result.id %}not_found{% endif %}" data-result-input>
-                                    <div class="d-flex gap-2 flex-wrap">
-                                        <button type="button" class="btn btn-outline-success round-result-btn {% if round.result_type_id == found_result.id %}active{% endif %}" data-result-button="found"><i class="bi bi-check2-circle me-1"></i>Found</button>
-                                        <button type="button" class="btn btn-outline-danger round-result-btn {% if round.result_type_id == not_found_result.id %}active{% endif %}" data-result-button="not_found"><i class="bi bi-x-circle me-1"></i>Not Found</button>
-                                    </div>
-                                </div>
-                                <div class="col-lg-6"><textarea class="form-control" rows="2" name="comment_{{ round.id }}" placeholder="Comment">{{ round.comment }}</textarea></div>
+                    {% if current_test %}
+                    <div class="round-panel">
+                        <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap mb-4">
+                            <div>
+                                <div class="text-muted fw-bold">Current Round</div>
+                                <div class="current-round-number">{{ current_round_number }} / {{ current_summary.total_rounds }}</div>
+                            </div>
+                            <div class="text-end">
+                                <div class="text-muted small">Defect</div>
+                                <div class="fw-bold">{{ display_index }} of {{ total_tests }}</div>
                             </div>
                         </div>
-                        {% empty %}
-                        <div class="empty-state"><i class="bi bi-inbox"></i><div>No rounds configured.</div></div>
-                        {% endfor %}
+
+                        <div class="round-result-grid mb-4">
+                            <button type="button" class="btn btn-outline-success round-result-btn" data-result-button="found"><i class="bi bi-check2-circle me-2"></i>FOUND</button>
+                            <button type="button" class="btn btn-outline-danger round-result-btn" data-result-button="not_found"><i class="bi bi-x-circle me-2"></i>NOT_FOUND</button>
+                        </div>
+
+                        <label for="round-comment" class="form-label fw-bold">Note</label>
+                        <textarea class="form-control form-control-lg mb-4" rows="3" id="round-comment" name="comment" placeholder="Optional note"></textarea>
+
+                        <button type="submit" class="btn btn-primary btn-lg touch-button w-100" id="save-round" disabled><i class="bi bi-save me-1"></i>Save</button>
                     </div>
+                    {% else %}
+                    <div class="empty-state"><i class="bi bi-inbox"></i><div>No tests configured for this session.</div></div>
+                    {% endif %}
                 </div>
             </div>
 
-            <div class="d-flex justify-content-between gap-3 mt-4 flex-wrap">
-                <button type="submit" name="action" value="previous" class="btn btn-outline-secondary btn-lg touch-button px-4" {% if current_index == 0 %}disabled{% endif %}><i class="bi bi-arrow-left me-1"></i>Previous Defect</button>
-                <div class="d-flex gap-3 flex-wrap">
-                    <button type="submit" name="action" value="save" class="btn btn-primary btn-lg touch-button px-4"><i class="bi bi-save me-1"></i>Save</button>
-                    {% if display_index == total_tests %}
-                    <button type="submit" name="action" value="finish" class="btn btn-success btn-lg touch-button px-4"><i class="bi bi-check2-circle me-1"></i>Finish Session</button>
-                    {% else %}
-                    <button type="submit" name="action" value="next" class="btn btn-primary btn-lg touch-button px-4">Next Defect<i class="bi bi-arrow-right ms-1"></i></button>
+            <div class="d-flex justify-content-between gap-3 mt-4 flex-wrap action-row">
+                {% if current_index == 0 %}<button type="button" class="btn btn-outline-secondary btn-lg touch-button px-4" disabled><i class="bi bi-arrow-left me-1"></i>Previous Defect</button>{% else %}<a href="{% url 'inspection:detail' session.pk %}?defect={{ current_index|add:'-1' }}" class="btn btn-outline-secondary btn-lg touch-button px-4"><i class="bi bi-arrow-left me-1"></i>Previous Defect</a>{% endif %}
+                <div class="d-flex gap-3 flex-wrap action-row">
+                    <a href="{% url 'inspection:detail' session.pk %}?summary=1" class="btn btn-outline-success btn-lg touch-button px-4"><i class="bi bi-graph-up me-1"></i>Summary</a>
+                    {% if display_index < total_tests %}
+                    <a href="{% url 'inspection:detail' session.pk %}?defect={{ current_index|add:'1' }}" class="btn btn-primary btn-lg touch-button px-4">Next Defect<i class="bi bi-arrow-right ms-1"></i></a>
                     {% endif %}
                 </div>
             </div>
         </div>
-        <div class="col-xl-3">
+        <div class="col-xl-4">
             <div class="factory-card summary-sidebar">
-                <div class="factory-card-header"><h5 class="mb-0 fw-bold">Session Summary</h5></div>
+                <div class="factory-card-header"><h5 class="mb-0 fw-bold">Progress</h5></div>
                 <div class="factory-card-body">
-                    <div class="metric-tile mb-3"><div class="text-muted small">Current Defect</div><div class="fw-bold">{{ current_test.defect_type.name|default:current_test.test_name }}</div></div>
-                    <div class="metric-tile mb-3"><div class="text-muted small">Rounds Completed</div><div class="h4 fw-bold mb-0" id="rounds-completed">{{ current_summary.completed }}</div></div>
+                    <div class="metric-tile mb-3"><div class="text-muted small">Completed Rounds</div><div class="h4 fw-bold mb-0" id="rounds-completed">{{ current_summary.completed }} / {{ current_summary.total_rounds }}</div></div>
                     <div class="row g-2 mb-3">
-                        <div class="col-6"><div class="metric-tile"><div class="text-muted small">Found</div><div class="h4 fw-bold text-success mb-0" id="found-count">{{ current_summary.found }}</div></div></div>
-                        <div class="col-6"><div class="metric-tile"><div class="text-muted small">Not Found</div><div class="h4 fw-bold text-danger mb-0" id="not-found-count">{{ current_summary.not_found }}</div></div></div>
+                        <div class="col-6"><div class="metric-tile"><div class="text-muted small">FOUND</div><div class="h4 fw-bold text-success mb-0" id="found-count">{{ current_summary.found }}</div></div></div>
+                        <div class="col-6"><div class="metric-tile"><div class="text-muted small">NOT_FOUND</div><div class="h4 fw-bold text-danger mb-0" id="not-found-count">{{ current_summary.not_found }}</div></div></div>
                     </div>
-                    <div class="metric-tile text-center"><div class="text-muted small">Detection Rate</div><div class="rate-number" id="detection-rate">{{ current_summary.detection_rate }}%</div></div>
+                    <div class="metric-tile mb-3"><div class="text-muted small">Status</div><div class="fw-bold" id="test-status">In Progress</div></div>
+                    <div class="metric-tile"><div class="text-muted small">Stop Limit</div><div class="fw-bold">4 NOT_FOUND</div></div>
                 </div>
             </div>
         </div>
@@ -162,40 +215,23 @@
 
 <script>
     (function () {
-        const rows = Array.from(document.querySelectorAll("[data-round-row]"));
-        const completedEl = document.getElementById("rounds-completed");
-        const foundEl = document.getElementById("found-count");
-        const notFoundEl = document.getElementById("not-found-count");
-        const rateEl = document.getElementById("detection-rate");
-        function updateSummary() {
-            let completed = 0;
-            let found = 0;
-            let notFound = 0;
-            rows.forEach((row) => {
-                const value = row.querySelector("[data-result-input]").value;
-                if (value) { completed += 1; }
-                if (value === "found") { found += 1; }
-                if (value === "not_found") { notFound += 1; }
-            });
-            const decided = found + notFound;
-            const rate = decided ? Math.round((found / decided) * 100) : 0;
-            if (completedEl) { completedEl.textContent = completed; }
-            if (foundEl) { foundEl.textContent = found; }
-            if (notFoundEl) { notFoundEl.textContent = notFound; }
-            if (rateEl) { rateEl.textContent = `${rate}%`; }
-        }
-        rows.forEach((row) => {
-            const input = row.querySelector("[data-result-input]");
-            row.querySelectorAll("[data-result-button]").forEach((button) => {
-                button.addEventListener("click", () => {
-                    input.value = button.dataset.resultButton;
-                    row.querySelectorAll("[data-result-button]").forEach((other) => other.classList.remove("active"));
-                    button.classList.add("active");
-                    updateSummary();
-                });
+        const form = document.getElementById("testing-form");
+        const selectedResult = document.getElementById("selected-result");
+        const saveButton = document.getElementById("save-round");
+        const buttons = Array.from(document.querySelectorAll("[data-result-button]"));
+        buttons.forEach((button) => {
+            button.addEventListener("click", () => {
+                buttons.forEach((other) => other.classList.remove("active"));
+                button.classList.add("active");
+                if (selectedResult) { selectedResult.value = button.dataset.resultButton; }
+                if (saveButton) { saveButton.disabled = false; }
             });
         });
-        updateSummary();
+        if (form) {
+            form.addEventListener("submit", () => {
+                if (saveButton && selectedResult && selectedResult.value) { saveButton.disabled = true; }
+            });
+        }
     })();
 </script>
 {% endif %}

@@ -31,7 +31,7 @@
                 </div>
                 <div class="table-responsive">
                     <table class="table table-modern table-hover align-middle">
-                        <thead><tr><th class="row-number">ลำดับ</th><th>Session</th><th>Date</th><th>Line</th><th>Model</th><th>Condition</th><th>Status</th></tr></thead>
+                        <thead><tr><th class="row-number">ลำดับ</th><th>Session</th><th>Date</th><th>Line</th><th>Condition</th><th>Status</th></tr></thead>
                         <tbody>
                             {% for session in latest_sessions %}
                             <tr>
@@ -39,12 +39,11 @@
                                 <td><a class="fw-bold text-decoration-none" href="{% url 'inspection:detail' session.pk %}">{{ session.session_number }}</a></td>
                                 <td>{{ session.inspection_date }}</td>
                                 <td>{{ session.line.name }}</td>
-                                <td>{{ session.product_model.name }}</td>
                                 <td><span class="chip">{{ session.test_condition.name }}</span></td>
                                 <td>{{ session.get_status_display }}</td>
                             </tr>
                             {% empty %}
-                            <tr><td colspan="7"><div class="empty-state"><i class="bi bi-inbox"></i><div>No test sessions available.</div></div></td></tr>
+                            <tr><td colspan="6"><div class="empty-state"><i class="bi bi-inbox"></i><div>No test sessions available.</div></div></td></tr>
                             {% endfor %}
                         </tbody>
                     </table>
@@ -64,3 +63,4 @@
     </div>
 </div>
 {% endblock %}
+

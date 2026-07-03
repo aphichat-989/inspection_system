@@ -1,4 +1,4 @@
-﻿from django.db.models import Q, Sum
+from django.db.models import Sum
 from django.db.models.functions import Coalesce
 
 from ...models import InspectionDefect
@@ -116,8 +116,6 @@ class DefectAnalyticsService:
             queryset = queryset.filter(inspection__line_id=filters.line_id)
         if filters.line_name:
             queryset = queryset.filter(inspection__line__name__icontains=filters.line_name)
-        if filters.product_model:
-            queryset = queryset.filter(Q(inspection__product_model__name__icontains=filters.product_model) | Q(inspection__part_name__icontains=filters.product_model) | Q(inspection__sd_code__icontains=filters.product_model))
         if filters.test_condition_id:
             queryset = queryset.filter(test_condition_id=filters.test_condition_id)
         if filters.start_date:
@@ -125,5 +123,7 @@ class DefectAnalyticsService:
         if filters.end_date:
             queryset = queryset.filter(inspection__inspection_date__lte=filters.end_date)
         return queryset
+
+
 
 

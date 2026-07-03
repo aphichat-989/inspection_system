@@ -33,6 +33,7 @@ ALLOWED_HOSTS = [
     "172.29.66.222",
 ]
 
+# ALLOWED_HOSTS = ["*"]
 # Application definition
 
 INSTALLED_APPS = [

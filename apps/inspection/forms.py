@@ -6,7 +6,6 @@ from .models import (
     DefectType,
     InspectionSession,
     Inspector,
-    ProductModel,
     ProductionLine,
     TestCondition,
     VerificationRecord,
@@ -28,11 +27,9 @@ class TestSessionForm(forms.ModelForm):
             self.initial.setdefault("inspection_date", datetime.now().date().strftime("%Y-%m-%d"))
         self.initial.setdefault("session_number", self.instance.session_number or session_number)
         self.fields["line"].queryset = ProductionLine.objects.filter(is_active=True).order_by("name")
-        self.fields["product_model"].queryset = ProductModel.objects.filter(is_active=True).order_by("name")
         self.fields["test_condition"].queryset = TestCondition.objects.filter(is_active=True).order_by("name")
         self.fields["inspector"].queryset = Inspector.objects.filter(is_active=True).order_by("name")
         self.fields["line"].empty_label = "Select production line"
-        self.fields["product_model"].empty_label = "Select product model"
         self.fields["test_condition"].empty_label = "Select test condition"
         self.fields["inspector"].empty_label = "Select inspector"
 
@@ -42,7 +39,6 @@ class TestSessionForm(forms.ModelForm):
             "session_number",
             "inspection_date",
             "line",
-            "product_model",
             "test_condition",
             "inspector",
             "overall_comment",
@@ -50,7 +46,6 @@ class TestSessionForm(forms.ModelForm):
         labels = {
             "inspection_date": "Inspection Date",
             "line": "Production Line",
-            "product_model": "Product Model",
             "test_condition": "Test Condition",
             "inspector": "Inspector",
             "overall_comment": "Overall Comment",
@@ -58,7 +53,6 @@ class TestSessionForm(forms.ModelForm):
         widgets = {
             "inspection_date": forms.DateInput(attrs={"type": "date", "class": "form-control form-control-lg"}),
             "line": forms.Select(attrs={"class": "form-select form-select-lg"}),
-            "product_model": forms.Select(attrs={"class": "form-select form-select-lg"}),
             "test_condition": forms.Select(attrs={"class": "form-select form-select-lg"}),
             "inspector": forms.Select(attrs={"class": "form-select form-select-lg"}),
             "overall_comment": forms.Textarea(
@@ -137,18 +131,6 @@ class ProductionLineForm(forms.ModelForm):
         }
 
 
-class ProductModelForm(forms.ModelForm):
-    class Meta:
-        model = ProductModel
-        fields = ["name", "description", "is_active"]
-        labels = {"name": "ชื่อรุ่นสินค้า", "description": "คำอธิบาย", "is_active": "ใช้งาน"}
-        widgets = {
-            "name": forms.TextInput(attrs={"class": "form-control", "placeholder": "Example: Model X-100 / Bracket LH"}),
-            "description": forms.Textarea(attrs={"class": "form-control", "rows": 3, "placeholder": "Example: Product model used for camera detection validation"}),
-            "is_active": forms.CheckboxInput(attrs={"class": "form-check-input"}),
-        }
-
-
 class DefectTypeForm(forms.ModelForm):
     class Meta:
         model = DefectType
@@ -171,3 +153,4 @@ class TestConditionForm(forms.ModelForm):
             "description": forms.Textarea(attrs={"class": "form-control", "rows": 3, "placeholder": "Example: Test under normal factory lighting at standard camera exposure"}),
             "is_active": forms.CheckboxInput(attrs={"class": "form-check-input"}),
         }
+

@@ -18,10 +18,6 @@ urlpatterns = [
     path("master-data/production-lines/new/", views.ProductionLineCreateView.as_view(), name="production_line_create"),
     path("master-data/production-lines/<int:pk>/edit/", views.ProductionLineUpdateView.as_view(), name="production_line_update"),
     path("master-data/production-lines/<int:pk>/delete/", views.ProductionLineDeleteView.as_view(), name="production_line_delete"),
-    path("master-data/product-models/", views.ProductModelListView.as_view(), name="product_model_list"),
-    path("master-data/product-models/new/", views.ProductModelCreateView.as_view(), name="product_model_create"),
-    path("master-data/product-models/<int:pk>/edit/", views.ProductModelUpdateView.as_view(), name="product_model_update"),
-    path("master-data/product-models/<int:pk>/delete/", views.ProductModelDeleteView.as_view(), name="product_model_delete"),
     path("master-data/inspectors/", views.InspectorListView.as_view(), name="inspector_list"),
     path("master-data/inspectors/new/", views.InspectorCreateView.as_view(), name="inspector_create"),
     path("master-data/inspectors/<int:pk>/edit/", views.InspectorUpdateView.as_view(), name="inspector_update"),
@@ -35,3 +31,4 @@ urlpatterns = [
     path("master-data/test-conditions/<int:pk>/edit/", views.TestConditionUpdateView.as_view(), name="test_condition_update"),
     path("master-data/test-conditions/<int:pk>/delete/", views.TestConditionDeleteView.as_view(), name="test_condition_delete"),
 ]
+

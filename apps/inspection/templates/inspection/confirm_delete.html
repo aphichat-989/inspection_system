@@ -15,7 +15,7 @@
         <p class="fs-5 mb-4">Delete Test Session <strong>{{ object.session_number }}</strong>?</p>
         <div class="metric-tile mb-4">
             <div class="text-muted small">Session</div>
-            <div class="fw-bold">{{ object.inspection_date }} · {{ object.line.name }} · {{ object.product_model.name }}</div>
+            <div class="fw-bold">{{ object.inspection_date }} · {{ object.line.name }}</div>
         </div>
         <form method="post" class="d-flex justify-content-end gap-2">
             {% csrf_token %}

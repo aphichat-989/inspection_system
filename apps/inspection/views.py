@@ -4,7 +4,7 @@ from django.contrib import messages
 from django.shortcuts import redirect
 from django.db import transaction
 from django.db.models import Prefetch
-from django.http import HttpResponseRedirect
+from django.http import HttpResponseBadRequest, HttpResponseRedirect
 from django.urls import reverse, reverse_lazy
 from django.views.generic import CreateView, DeleteView, DetailView, ListView, UpdateView
 from django.views.generic.base import TemplateView
@@ -12,7 +12,6 @@ from django.views.generic.base import TemplateView
 from .forms import (
     DefectTypeForm,
     InspectorForm,
-    ProductModelForm,
     ProductionLineForm,
     TestConditionForm,
     TestSessionForm,
@@ -25,7 +24,6 @@ from .models import (
     InspectionSession,
     InspectionTest,
     Inspector,
-    ProductModel,
     ProductionLine,
     TestCondition,
     VerificationRecord,
@@ -46,6 +44,9 @@ def set_language(request, language):
 
 FOUND_RESULT_NAME = "Found"
 NOT_FOUND_RESULT_NAME = "Not Found"
+NOT_FOUND_STOP_LIMIT = 4
+NOT_FOUND_STOP_REASON = "NOT_FOUND reached 4 occurrences"
+AUTO_COMPLETED_MESSAGE = "Inspection completed automatically because NOT_FOUND reached 4 occurrences."
 
 
 def get_round_result_types():
@@ -76,9 +77,11 @@ def test_summary(test):
     found = 0
     not_found = 0
     completed = 0
+    last_round = 0
     for round_item in test.rounds.all():
         if round_item.result_type_id:
             completed += 1
+            last_round = max(last_round, round_item.round_number)
         result_name = round_item.result_type.name if round_item.result_type else ""
         if result_name == FOUND_RESULT_NAME:
             found += 1
@@ -86,14 +89,71 @@ def test_summary(test):
             not_found += 1
     decided = found + not_found
     detection_rate = round((found / decided) * 100) if decided else 0
+    completed_rounds = test.completed_rounds or last_round or completed
     return {
         "test": test,
         "found": found,
         "not_found": not_found,
-        "completed": completed,
-        "total_rounds": test.rounds.count(),
+        "completed": completed_rounds,
+        "total_rounds": test.total_rounds,
         "detection_rate": detection_rate,
+        "stop_reason": test.stop_reason,
+        "status": test.status,
+        "is_finished": test.status == InspectionTest.STATUS_FINISHED,
+        "next_round_number": min(completed_rounds + 1, test.total_rounds),
     }
+
+
+@transaction.atomic
+def record_inspection_round(session, test_id, result_value, comment_value=""):
+    if result_value not in {"found", "not_found"}:
+        return None, "Please select FOUND or NOT_FOUND before submitting."
+
+    found_result, not_found_result = get_round_result_types()
+    test = InspectionTest.objects.select_for_update().get(pk=test_id, session=session)
+    if test.status == InspectionTest.STATUS_FINISHED:
+        return None, "This inspection test is already finished. Additional rounds cannot be recorded."
+
+    completed_rounds = test.rounds.filter(result_type__isnull=False).count()
+    next_round_number = max(test.completed_rounds, completed_rounds) + 1
+    if next_round_number > test.total_rounds:
+        test.completed_rounds = test.total_rounds
+        test.status = InspectionTest.STATUS_FINISHED
+        test.save(update_fields=["completed_rounds", "status"])
+        return None, "All planned rounds are already completed. Additional rounds cannot be recorded."
+
+    result_type = found_result if result_value == "found" else not_found_result
+    round_item, created = InspectionRound.objects.get_or_create(
+        inspection_test=test,
+        round_number=next_round_number,
+        defaults={"result_type": result_type, "comment": comment_value},
+    )
+    if not created and round_item.result_type_id:
+        return None, "This round has already been recorded."
+    if not created:
+        round_item.result_type = result_type
+        round_item.comment = comment_value
+        round_item.save(update_fields=["result_type", "comment"])
+
+    not_found_count = test.rounds.filter(result_type=not_found_result).count()
+    update_fields = ["completed_rounds"]
+    test.completed_rounds = next_round_number
+    auto_completed = False
+    if not_found_count >= NOT_FOUND_STOP_LIMIT:
+        test.status = InspectionTest.STATUS_FINISHED
+        test.stop_reason = NOT_FOUND_STOP_REASON
+        update_fields.extend(["status", "stop_reason"])
+        auto_completed = True
+    elif next_round_number >= test.total_rounds:
+        test.status = InspectionTest.STATUS_FINISHED
+        update_fields.append("status")
+    test.save(update_fields=update_fields)
+
+    if not session.tests.exclude(status=InspectionTest.STATUS_FINISHED).exists():
+        session.status = InspectionSession.STATUS_COMPLETED
+        session.save(update_fields=["status"])
+
+    return {"test": test, "round": round_item, "auto_completed": auto_completed}, None
 
 
 class DashboardView(TemplateView):
@@ -101,7 +161,7 @@ class DashboardView(TemplateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        sessions = InspectionSession.objects.select_related("line", "product_model", "test_condition", "inspector")
+        sessions = InspectionSession.objects.select_related("line", "test_condition", "inspector")
         today = date.today()
         latest_sessions = sessions.order_by("-inspection_date", "-created_at")[:8]
         total_sessions = sessions.count()
@@ -129,15 +189,12 @@ class InspectionListView(ListView):
     paginate_by = 15
 
     def get_queryset(self):
-        queryset = InspectionSession.objects.select_related("line", "product_model", "test_condition", "inspector")
+        queryset = InspectionSession.objects.select_related("line", "test_condition", "inspector")
         line_name = self.request.GET.get("line_name", "").strip()
-        product_model = self.request.GET.get("product_model", "").strip()
         start_date = self.request.GET.get("start_date", "").strip()
         end_date = self.request.GET.get("end_date", "").strip()
         if line_name:
             queryset = queryset.filter(line__name__icontains=line_name)
-        if product_model:
-            queryset = queryset.filter(product_model__name__icontains=product_model)
         if start_date:
             queryset = queryset.filter(inspection_date__gte=start_date)
         if end_date:
@@ -147,7 +204,6 @@ class InspectionListView(ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["line_name"] = self.request.GET.get("line_name", "")
-        context["product_model"] = self.request.GET.get("product_model", "")
         context["start_date"] = self.request.GET.get("start_date", "")
         context["end_date"] = self.request.GET.get("end_date", "")
         return context
@@ -209,14 +265,11 @@ class InspectionCreateView(TestSessionContextMixin, CreateView):
         self.object.save()
         for defect in selected_defects:
             total_rounds = max(1, int(self.request.POST.get(f"rounds_{defect.pk}") or 1))
-            test = InspectionTest.objects.create(
+            InspectionTest.objects.create(
                 session=self.object,
                 defect_type=defect,
-                test_name=defect.name,
+                test_name=str(defect.pk),
                 total_rounds=total_rounds,
-            )
-            InspectionRound.objects.bulk_create(
-                [InspectionRound(inspection_test=test, round_number=round_number) for round_number in range(1, total_rounds + 1)]
             )
         messages.success(self.request, "Test Session created. Start testing now.")
         return HttpResponseRedirect(reverse("inspection:detail", kwargs={"pk": self.object.pk}))
@@ -240,18 +293,11 @@ class InspectionUpdateView(TestSessionContextMixin, UpdateView):
             total_rounds = max(1, int(self.request.POST.get(f"rounds_{defect.pk}") or 1))
             test = existing_tests.get(defect.pk)
             if not test:
-                test = InspectionTest.objects.create(session=self.object, defect_type=defect, test_name=defect.name, total_rounds=total_rounds)
+                test = InspectionTest.objects.create(session=self.object, defect_type=defect, test_name=str(defect.pk), total_rounds=total_rounds)
             else:
                 test.total_rounds = total_rounds
                 test.save(update_fields=["total_rounds"])
-            existing_round_numbers = set(test.rounds.values_list("round_number", flat=True))
-            InspectionRound.objects.bulk_create(
-                [
-                    InspectionRound(inspection_test=test, round_number=round_number)
-                    for round_number in range(1, total_rounds + 1)
-                    if round_number not in existing_round_numbers
-                ]
-            )
+
         messages.success(self.request, "Test Session updated.")
         return HttpResponseRedirect(reverse("inspection:detail", kwargs={"pk": self.object.pk}))
 
@@ -262,7 +308,7 @@ class InspectionDetailView(DetailView):
     context_object_name = "session"
 
     def get_queryset(self):
-        return InspectionSession.objects.select_related("line", "product_model", "test_condition", "inspector").prefetch_related(
+        return InspectionSession.objects.select_related("line", "test_condition", "inspector").prefetch_related(
             Prefetch(
                 "tests",
                 queryset=InspectionTest.objects.select_related("defect_type").prefetch_related(
@@ -273,32 +319,46 @@ class InspectionDetailView(DetailView):
 
     def post(self, request, *args, **kwargs):
         self.object = self.get_object()
-        found_result, not_found_result = get_round_result_types()
         action = request.POST.get("action", "save")
         current_index = int(request.POST.get("current_index") or 0)
         current_test_id = request.POST.get("current_test_id")
-        if current_test_id:
-            rounds = InspectionRound.objects.filter(inspection_test_id=current_test_id, inspection_test__session=self.object)
-            for round_item in rounds:
-                result_value = request.POST.get(f"result_{round_item.pk}", "")
-                comment_value = request.POST.get(f"comment_{round_item.pk}", "")
-                if result_value == "found":
-                    round_item.result_type = found_result
-                elif result_value == "not_found":
-                    round_item.result_type = not_found_result
-                round_item.comment = comment_value
-                round_item.save(update_fields=["result_type", "comment"])
+        result_value = request.POST.get("result", "")
+        show_finished_summary = False
+
+        if result_value:
+            if not current_test_id:
+                return HttpResponseBadRequest("No inspection test was selected.")
+            result, error = record_inspection_round(
+                self.object,
+                current_test_id,
+                result_value,
+                request.POST.get("comment", ""),
+            )
+            if error:
+                return HttpResponseBadRequest(error)
+            if result["auto_completed"]:
+                messages.info(request, AUTO_COMPLETED_MESSAGE)
+                show_finished_summary = True
+            else:
+                messages.success(request, "Inspection round recorded.")
+                show_finished_summary = result["test"].status == InspectionTest.STATUS_FINISHED
+        elif action == "save":
+            return HttpResponseBadRequest("Please select FOUND or NOT_FOUND before submitting.")
+
         tests_count = self.object.tests.count()
         if action == "finish":
             self.object.status = InspectionSession.STATUS_COMPLETED
             self.object.save(update_fields=["status"])
             messages.success(request, "Test Session finished.")
             return HttpResponseRedirect(f"{reverse('inspection:detail', kwargs={'pk': self.object.pk})}?summary=1")
+        if show_finished_summary:
+            return HttpResponseRedirect(
+                f"{reverse('inspection:detail', kwargs={'pk': self.object.pk})}?defect={current_index}&summary=1"
+            )
         if action == "previous":
             current_index = max(0, current_index - 1)
         elif action == "next":
             current_index = min(max(tests_count - 1, 0), current_index + 1)
-        messages.success(request, "Testing progress saved.")
         return HttpResponseRedirect(f"{reverse('inspection:detail', kwargs={'pk': self.object.pk})}?defect={current_index}")
 
     def get_context_data(self, **kwargs):
@@ -308,19 +368,32 @@ class InspectionDetailView(DetailView):
         current_index = int(self.request.GET.get("defect") or 0)
         current_index = min(max(current_index, 0), max(len(tests) - 1, 0)) if tests else 0
         summaries = [test_summary(test) for test in tests]
+        current_summary = summaries[current_index] if summaries else None
+        current_test = tests[current_index] if tests else None
+        current_round_number = current_summary["next_round_number"] if current_summary else 0
+        round_progress_percent = (
+            round((current_summary["completed"] / current_summary["total_rounds"]) * 100)
+            if current_summary and current_summary["total_rounds"]
+            else 0
+        )
+        show_summary = self.request.GET.get("summary") == "1" or (
+            current_summary and current_summary["is_finished"]
+        )
         context.update(
             {
                 "tests": tests,
-                "current_test": tests[current_index] if tests else None,
+                "current_test": current_test,
                 "current_index": current_index,
                 "display_index": current_index + 1,
                 "total_tests": len(tests),
                 "progress_percent": round(((current_index + 1) / len(tests)) * 100) if tests else 0,
+                "round_progress_percent": round_progress_percent,
                 "summaries": summaries,
-                "current_summary": summaries[current_index] if summaries else None,
+                "current_summary": current_summary,
                 "found_result": found_result,
                 "not_found_result": not_found_result,
-                "show_summary": self.request.GET.get("summary") == "1",
+                "current_round_number": current_round_number,
+                "show_summary": show_summary,
             }
         )
         return context
@@ -498,40 +571,6 @@ class ProductionLineDeleteView(MasterDataDeleteView):
     success_url_name = "inspection:production_line_list"
 
 
-class ProductModelListView(MasterDataListView):
-    model = ProductModel
-    page_title = "รุ่นสินค้า"
-    create_url_name = "inspection:product_model_create"
-    update_url_name = "inspection:product_model_update"
-    delete_url_name = "inspection:product_model_delete"
-
-
-class ProductModelCreateView(MasterDataCreateView):
-    model = ProductModel
-    form_class = ProductModelForm
-    page_title = "เพิ่มรุ่นสินค้า"
-    name_help = "กรอกรุ่นสินค้า เช่น Model X-100, Bracket LH, Cover RH"
-    description_help = "อธิบายชิ้นงานหรือรุ่นที่ใช้ทดสอบ เช่น Camera validation part"
-    active_help = "เปิดใช้งานเพื่อให้เลือกได้ในหน้า Create New Test Session"
-    success_url_name = "inspection:product_model_list"
-
-
-class ProductModelUpdateView(MasterDataUpdateView):
-    model = ProductModel
-    form_class = ProductModelForm
-    page_title = "แก้ไขรุ่นสินค้า"
-    name_help = "กรอกรุ่นสินค้า เช่น Model X-100, Bracket LH, Cover RH"
-    description_help = "อธิบายชิ้นงานหรือรุ่นที่ใช้ทดสอบ เช่น Camera validation part"
-    active_help = "เปิดใช้งานเพื่อให้เลือกได้ในหน้า Create New Test Session"
-    success_url_name = "inspection:product_model_list"
-
-
-class ProductModelDeleteView(MasterDataDeleteView):
-    model = ProductModel
-    page_title = "ลบรุ่นสินค้า"
-    success_url_name = "inspection:product_model_list"
-
-
 class InspectorListView(MasterDataListView):
     model = Inspector
     page_title = "Inspectors"
@@ -632,3 +671,7 @@ class TestConditionDeleteView(MasterDataDeleteView):
     model = TestCondition
     page_title = "ลบประเภทการทดสอบ"
     success_url_name = "inspection:test_condition_list"
+
+
+
+

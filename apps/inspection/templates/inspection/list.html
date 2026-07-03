@@ -11,10 +11,9 @@
 
 <form method="get" class="toolbar-panel mb-4">
     <div class="row g-3 align-items-end">
-        <div class="col-md-3"><label class="form-label">Production Line</label><input type="text" class="form-control form-control-lg" name="line_name" value="{{ line_name }}" placeholder="Line name"></div>
-        <div class="col-md-3"><label class="form-label">Product Model</label><input type="text" class="form-control form-control-lg" name="product_model" value="{{ product_model }}" placeholder="Model name"></div>
-        <div class="col-md-2"><label class="form-label">Start Date</label><input type="date" class="form-control form-control-lg" name="start_date" value="{{ start_date }}"></div>
-        <div class="col-md-2"><label class="form-label">End Date</label><input type="date" class="form-control form-control-lg" name="end_date" value="{{ end_date }}"></div>
+        <div class="col-md-4"><label class="form-label">Production Line</label><input type="text" class="form-control form-control-lg" name="line_name" value="{{ line_name }}" placeholder="Line name"></div>
+        <div class="col-md-3"><label class="form-label">Start Date</label><input type="date" class="form-control form-control-lg" name="start_date" value="{{ start_date }}"></div>
+        <div class="col-md-3"><label class="form-label">End Date</label><input type="date" class="form-control form-control-lg" name="end_date" value="{{ end_date }}"></div>
         <div class="col-md-2 d-grid"><button type="submit" class="btn btn-outline-primary btn-lg btn-icon"><i class="bi bi-funnel"></i>Filter</button></div>
     </div>
 </form>
@@ -26,7 +25,7 @@
     </div>
     <div class="table-responsive">
         <table class="table table-modern table-hover align-middle">
-            <thead><tr><th class="row-number">ลำดับ</th><th>Session</th><th>Date</th><th>Line</th><th>Model</th><th>Condition</th><th>Inspector</th><th>Status</th><th class="text-end">Action</th></tr></thead>
+            <thead><tr><th class="row-number">ลำดับ</th><th>Session</th><th>Date</th><th>Line</th><th>Condition</th><th>Inspector</th><th>Status</th><th class="text-end">Action</th></tr></thead>
             <tbody>
                 {% for session in sessions %}
                 <tr>
@@ -34,7 +33,6 @@
                     <td class="fw-bold">{{ session.session_number }}</td>
                     <td>{{ session.inspection_date }}</td>
                     <td>{{ session.line.name }}</td>
-                    <td>{{ session.product_model.name }}</td>
                     <td><span class="chip">{{ session.test_condition.name }}</span></td>
                     <td>{{ session.inspector.name }}</td>
                     <td><span class="chip"><i class="bi bi-circle-fill small"></i>{{ session.get_status_display }}</span></td>
@@ -47,7 +45,7 @@
                     </td>
                 </tr>
                 {% empty %}
-                <tr><td colspan="9"><div class="empty-state"><i class="bi bi-clipboard2-x"></i><div class="fw-semibold mt-2">No test sessions found.</div></div></td></tr>
+                <tr><td colspan="8"><div class="empty-state"><i class="bi bi-clipboard2-x"></i><div class="fw-semibold mt-2">No test sessions found.</div></div></td></tr>
                 {% endfor %}
             </tbody>
         </table>

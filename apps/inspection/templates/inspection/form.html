@@ -46,7 +46,7 @@
     </div>
 
     <div class="setup-strip" aria-label="Test session setup steps">
-        <div class="setup-step"><span class="setup-step-icon"><i class="bi bi-clipboard2-check"></i></span><div><div class="fw-bold">1. Session</div><div class="text-muted small">Line, model, condition, inspector</div></div></div>
+        <div class="setup-step"><span class="setup-step-icon"><i class="bi bi-clipboard2-check"></i></span><div><div class="fw-bold">1. Session</div><div class="text-muted small">Line, condition, inspector</div></div></div>
         <div class="setup-step"><span class="setup-step-icon"><i class="bi bi-exclamation-diamond"></i></span><div><div class="fw-bold">2. Defects</div><div class="text-muted small">Pick active defect types</div></div></div>
         <div class="setup-step"><span class="setup-step-icon"><i class="bi bi-repeat"></i></span><div><div class="fw-bold">3. Rounds</div><div class="text-muted small">Create execution rounds automatically</div></div></div>
     </div>
@@ -95,14 +95,7 @@
                             {{ form.line.errors }}
                         </div>
                     </div>
-                    <div class="col-md-6 col-xl-4">
-                        <div class="field-shell">
-                            <label class="form-label" for="{{ form.product_model.id_for_label }}"><span class="required-dot"></span>{{ form.product_model.label }}</label>
-                            {{ form.product_model }}
-                            <div class="form-text">Example: Model X-100, Bracket LH, Cover RH.</div>
-                            {{ form.product_model.errors }}
-                        </div>
-                    </div>
+
                     <div class="col-md-6 col-xl-4">
                         <div class="field-shell">
                             <label class="form-label" for="{{ form.test_condition.id_for_label }}"><span class="required-dot"></span>{{ form.test_condition.label }}</label>
