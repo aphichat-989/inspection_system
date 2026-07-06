@@ -25,6 +25,8 @@ staticfiles/
 
 # Environment
 .env
+.env.*
+!.env.example
 
 # Logs
 *.log

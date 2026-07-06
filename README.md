@@ -5,20 +5,86 @@
 - Master Data: ไลน์ผลิต, ประเภท defect, เงื่อนไขทดสอบ, inspector, result type
 - Transaction Data: test session, test round, inspection record, defect record, verification record
 
-## Quick Start
+## One-Click Installation (Windows)
+
+สำหรับ Windows ให้ติดตั้ง Docker Desktop ก่อน จากนั้นใช้งานแบบ one-click ได้ทันที:
 
 1. Clone repository
-2. Copy .env.example to .env
-3. Replace every CHANGE_ME value
-4. Run:
+2. Double-click `setup.bat`
+3. Open `http://localhost:8000`
+
+`setup.bat` จะตรวจ Docker, สร้าง `.env` จาก `.env.example`, generate `DJANGO_SECRET_KEY` และ `DB_PASSWORD`, build/start containers, run migrations, collect static files, ตรวจ health check ที่ `/healthz/`, และเปิด browser อัตโนมัติ
+
+หลังติดตั้งแล้วสามารถใช้ไฟล์เหล่านี้ได้:
+
+| File | Purpose |
+| --- | --- |
+| `setup.bat` | ติดตั้งครั้งแรกแบบอัตโนมัติ |
+| `start.bat` | เปิดระบบอีกครั้ง |
+| `stop.bat` | ปิดระบบ |
+| `update.bat` | ดึง code ล่าสุด, rebuild, และ start ใหม่ |
+| `reset.bat` | ลบ containers และ volumes เพื่อเริ่มใหม่ |
+
+## Manual Installation (Docker)
+
+ใช้วิธีนี้เมื่อต้องการรันคำสั่งเอง:
+
+1. Copy `.env.example` เป็น `.env`
+2. Replace `CHANGE_ME` ใน `DJANGO_SECRET_KEY` และ `DB_PASSWORD`
+3. Run:
 
 ```powershell
-docker compose up --build
+docker compose build
+docker compose up -d
+docker compose exec web python manage.py migrate
+docker compose exec web python manage.py collectstatic --noinput
 ```
 
-5. Open:
+4. Open `http://localhost:8000`
 
-http://localhost:8000
+## Troubleshooting
+
+### Docker was not found
+
+ติดตั้ง Docker Desktop แล้วเปิดโปรแกรมก่อน run `setup.bat`
+
+### Docker Desktop is not running
+
+เปิด Docker Desktop และรอจน Docker พร้อมใช้งาน จากนั้น run script อีกครั้ง
+
+### docker compose is not available
+
+อัปเดต Docker Desktop เป็น version ที่มี Docker Compose v2 แล้วลองใหม่
+
+### Port 8000 is already in use
+
+ปิดโปรแกรมที่ใช้ port 8000 หรือ stop container เดิมก่อน จากนั้น run `setup.bat` อีกครั้ง
+
+### Health check failed
+
+ตรวจสถานะ container:
+
+```powershell
+docker compose ps
+docker compose logs web
+```
+
+### Missing `.env`
+
+Run `setup.bat` เพื่อสร้าง `.env` จาก `.env.example` และ generate secrets อัตโนมัติ
+
+## How to Reset System
+
+Double-click `reset.bat` แล้วพิมพ์ `RESET` เพื่อยืนยัน
+
+คำสั่งนี้จะ run:
+
+```powershell
+docker compose down -v
+docker system prune -f
+```
+
+ข้อมูล PostgreSQL ใน Docker volume ของ project จะถูกลบ หลัง reset ให้ run `setup.bat` เพื่อติดตั้งใหม่
 
 ## Deployment Commands
 
@@ -432,4 +498,3 @@ VALUES
     ('Not Found', 'Defect was not detected during the test round.', TRUE, CURRENT_TIMESTAMP)
 ON CONFLICT (name) DO NOTHING;
 ```
-
