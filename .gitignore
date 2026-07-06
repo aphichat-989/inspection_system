@@ -2,6 +2,14 @@
 __pycache__/
 *.py[cod]
 *.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
 
 # Virtual Environment
 .venv/
@@ -20,6 +28,8 @@ staticfiles/
 
 # Logs
 *.log
+*.tmp
+*.bak
 
 # OS
 .DS_Store
