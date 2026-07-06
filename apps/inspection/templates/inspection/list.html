@@ -12,7 +12,10 @@
             <h3 class="page-title">Test Sessions</h3>
             <p class="page-subtitle">Search, continue, and review defect detection test sessions.</p>
         </div>
-        <a href="{% url 'inspection:create' %}" class="btn btn-primary btn-lg btn-icon"><i class="bi bi-plus-circle"></i>New Test Session</a>
+        <div class="d-flex gap-2 flex-wrap justify-content-end">
+            <a href="{% url 'inspection:session_export' %}{% if request.GET.urlencode %}?{{ request.GET.urlencode }}{% endif %}" class="btn btn-outline-success btn-lg btn-icon"><i class="bi bi-file-earmark-excel"></i>Export Excel</a>
+            <a href="{% url 'inspection:create' %}" class="btn btn-primary btn-lg btn-icon"><i class="bi bi-plus-circle"></i>New Test Session</a>
+        </div>
     </div>
 
     <form method="get" class="toolbar-panel mb-4">

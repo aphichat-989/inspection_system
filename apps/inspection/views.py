@@ -39,6 +39,7 @@ from .views_sessions import (
     InspectionDeleteView,
     InspectionDetailView,
     InspectionListView,
+    InspectionSessionExportView,
     InspectionUpdateView,
     TestSessionContextMixin,
 )
@@ -62,6 +63,7 @@ __all__ = [
     "record_inspection_round",
     "test_summary",
     "InspectionListView",
+    "InspectionSessionExportView",
     "InspectionBulkDeleteView",
     "InspectionCreateView",
     "InspectionDetailView",

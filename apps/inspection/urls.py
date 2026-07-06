@@ -6,6 +6,7 @@ urlpatterns = [
     path("language/<str:language>/", views.set_language, name="set_language"),
     path("", views.DashboardView.as_view(), name="dashboard"),
     path("list/", views.InspectionListView.as_view(), name="list"),
+    path("list/export/", views.InspectionSessionExportView.as_view(), name="session_export"),
     path("new/", views.InspectionCreateView.as_view(), name="create"),
     path("bulk-delete/", views.InspectionBulkDeleteView.as_view(), name="bulk_delete"),
     path("<int:pk>/", views.InspectionDetailView.as_view(), name="detail"),

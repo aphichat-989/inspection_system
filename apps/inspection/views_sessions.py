@@ -1,10 +1,15 @@
+from io import BytesIO
+
 from django.contrib import messages
 from django.db import transaction
-from django.db.models import Prefetch
-from django.http import HttpResponseBadRequest, HttpResponseRedirect
+from django.db.models import Count, Prefetch, Q
+from django.http import HttpResponse, HttpResponseBadRequest, HttpResponseRedirect
 from django.urls import reverse, reverse_lazy
+from django.utils import timezone
 from django.views import View
 from django.views.generic import CreateView, DeleteView, DetailView, ListView, UpdateView
+from openpyxl import Workbook
+from openpyxl.styles import Font
 
 from .forms import TestSessionForm
 from .models import DefectType, InspectionRound, InspectionSession, InspectionTest, Inspector
@@ -17,31 +22,115 @@ from .views_helpers import (
 )
 
 
-class InspectionListView(ListView):
+class TestSessionListQuerysetMixin:
+    def get_filter_values(self):
+        return {
+            "line_name": self.request.GET.get("line_name", "").strip(),
+            "start_date": self.request.GET.get("start_date", "").strip(),
+            "end_date": self.request.GET.get("end_date", "").strip(),
+        }
+
+    def get_base_queryset(self):
+        return InspectionSession.objects.select_related("line", "test_condition", "inspector")
+
+    def apply_filters(self, queryset):
+        filters = self.get_filter_values()
+        if filters["line_name"]:
+            queryset = queryset.filter(line__name__icontains=filters["line_name"])
+        if filters["start_date"]:
+            queryset = queryset.filter(inspection_date__gte=filters["start_date"])
+        if filters["end_date"]:
+            queryset = queryset.filter(inspection_date__lte=filters["end_date"])
+        return queryset
+
+    def get_filtered_queryset(self):
+        return self.apply_filters(self.get_base_queryset()).order_by("-inspection_date", "-created_at")
+
+
+class InspectionListView(TestSessionListQuerysetMixin, ListView):
     model = InspectionSession
     template_name = "inspection/list.html"
     context_object_name = "sessions"
     paginate_by = 15
 
     def get_queryset(self):
-        queryset = InspectionSession.objects.select_related("line", "test_condition", "inspector")
-        line_name = self.request.GET.get("line_name", "").strip()
-        start_date = self.request.GET.get("start_date", "").strip()
-        end_date = self.request.GET.get("end_date", "").strip()
-        if line_name:
-            queryset = queryset.filter(line__name__icontains=line_name)
-        if start_date:
-            queryset = queryset.filter(inspection_date__gte=start_date)
-        if end_date:
-            queryset = queryset.filter(inspection_date__lte=end_date)
-        return queryset.order_by("-inspection_date", "-created_at")
+        return self.get_filtered_queryset()
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["line_name"] = self.request.GET.get("line_name", "")
-        context["start_date"] = self.request.GET.get("start_date", "")
-        context["end_date"] = self.request.GET.get("end_date", "")
+        context.update(self.get_filter_values())
         return context
+
+
+class InspectionSessionExportView(TestSessionListQuerysetMixin, View):
+    headers = [
+        "Session Number",
+        "Inspection Date",
+        "Production Line",
+        "Inspector",
+        "Test Condition",
+        "Status",
+        "Number of Defect Tests",
+        "Completed Tests",
+        "Overall Comment",
+        "Created At",
+    ]
+
+    def get_queryset(self):
+        return self.get_filtered_queryset().annotate(
+            defect_test_count=Count("tests", distinct=True),
+            completed_test_count=Count(
+                "tests",
+                filter=Q(tests__status=InspectionTest.STATUS_FINISHED),
+                distinct=True,
+            ),
+        )
+
+    def get(self, request, *args, **kwargs):
+        workbook = Workbook()
+        worksheet = workbook.active
+        worksheet.title = "Test Sessions"
+        worksheet.append(self.headers)
+        worksheet.freeze_panes = "A2"
+
+        for cell in worksheet[1]:
+            cell.font = Font(bold=True)
+
+        for session in self.get_queryset():
+            created_at = timezone.localtime(session.created_at) if session.created_at else None
+            worksheet.append(
+                [
+                    session.session_number,
+                    session.inspection_date,
+                    session.line.name,
+                    session.inspector.name,
+                    session.test_condition.name,
+                    session.get_status_display(),
+                    session.defect_test_count,
+                    session.completed_test_count,
+                    session.overall_comment,
+                    created_at.replace(tzinfo=None) if created_at else None,
+                ]
+            )
+
+        for row in worksheet.iter_rows(min_row=2, min_col=2, max_col=2):
+            row[0].number_format = "yyyy-mm-dd"
+        for row in worksheet.iter_rows(min_row=2, min_col=10, max_col=10):
+            row[0].number_format = "yyyy-mm-dd hh:mm:ss"
+
+        for column_cells in worksheet.columns:
+            max_length = max(len(str(cell.value or "")) for cell in column_cells)
+            worksheet.column_dimensions[column_cells[0].column_letter].width = min(max(max_length + 2, 12), 60)
+
+        output = BytesIO()
+        workbook.save(output)
+        filename = f"inspection_sessions_{timezone.localtime().strftime('%Y%m%d_%H%M%S')}.xlsx"
+        response = HttpResponse(
+            output.getvalue(),
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+        response["Content-Disposition"] = f'attachment; filename="{filename}"'
+        return response
 
 
 class TestSessionContextMixin:
