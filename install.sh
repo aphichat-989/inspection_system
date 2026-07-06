@@ -75,12 +75,12 @@ ensure_env_file() {
 }
 
 validate_env_file() {
-  local django_env debug allowed_hosts secret_key postgres_port
+  local django_env debug allowed_hosts secret_key db_port
   django_env="$(read_env_value DJANGO_ENV)"
   debug="$(read_env_value DEBUG)"
   allowed_hosts="$(read_env_value ALLOWED_HOSTS)"
   secret_key="$(read_env_value DJANGO_SECRET_KEY)"
-  postgres_port="$(read_env_value POSTGRES_PORT)"
+  db_port="$(read_env_value DB_PORT)"
 
   [[ "${django_env}" == "production" ]] || fail "DJANGO_ENV must be production"
   [[ "${debug,,}" == "false" || "${debug}" == "0" || "${debug,,}" == "no" || "${debug,,}" == "off" ]] || fail "DEBUG must be false"
@@ -90,11 +90,11 @@ validate_env_file() {
   [[ "${secret_key}" != "django-insecure-local-development-only-change-me" ]] || fail "DJANGO_SECRET_KEY must be changed from the development placeholder"
   [[ "${secret_key}" != django-insecure-* ]] || fail "DJANGO_SECRET_KEY must not use a django-insecure placeholder"
 
-  require_env_value POSTGRES_DB
-  require_env_value POSTGRES_USER
-  require_env_value POSTGRES_PASSWORD
-  require_env_value POSTGRES_HOST
-  [[ -n "${postgres_port}" ]] || fail "POSTGRES_PORT must be set"
+  require_env_value DB_NAME
+  require_env_value DB_USER
+  require_env_value DB_PASSWORD
+  require_env_value DB_HOST
+  [[ -n "${db_port}" ]] || fail "DB_PORT must be set"
 }
 
 setup_python_environment() {

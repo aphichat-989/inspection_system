@@ -4,10 +4,6 @@ services:
     restart: unless-stopped
     env_file:
       - .env
-    environment:
-      DB_HOST: db
-      DB_PORT: 5432
-      DB_WAIT_TIMEOUT: 60
     ports:
       - "8000:8000"
     depends_on:

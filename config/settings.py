@@ -27,12 +27,8 @@ def load_env_file(path):
         os.environ.setdefault(key, value)
 
 
-def env(name, default=None, required=False, aliases=()):
+def env(name, default=None, required=False):
     value = os.environ.get(name)
-    for alias in aliases:
-        if value is not None and value != "":
-            break
-        value = os.environ.get(alias)
     if value is None or value == "":
         if required:
             raise RuntimeError(f"Missing required environment variable: {name}")
@@ -40,8 +36,8 @@ def env(name, default=None, required=False, aliases=()):
     return value
 
 
-def env_bool(name, default=None, required=False, aliases=()):
-    value = env(name, required=required, aliases=aliases)
+def env_bool(name, default=None, required=False):
+    value = env(name, required=required)
     if value is None:
         return default
     normalized = value.strip().lower()
@@ -52,15 +48,15 @@ def env_bool(name, default=None, required=False, aliases=()):
     raise RuntimeError(f"Invalid boolean value for {name}: {value}")
 
 
-def env_int(name, default=0, aliases=()):
-    value = env(name, aliases=aliases)
+def env_int(name, default=0):
+    value = env(name)
     if value is None:
         return default
     return int(value)
 
 
-def env_list(name, default=None, required=False, aliases=()):
-    value = env(name, required=required, aliases=aliases)
+def env_list(name, default=None, required=False):
+    value = env(name, required=required)
     if value is None:
         return default or []
     return [item.strip() for item in value.split(",") if item.strip()]
@@ -69,15 +65,11 @@ def env_list(name, default=None, required=False, aliases=()):
 load_env_file(BASE_DIR / ".env")
 
 DJANGO_ENV = env("DJANGO_ENV", "development").strip().lower()
-DEBUG = env_bool("DEBUG", required=True, aliases=("DJANGO_DEBUG",))
+DEBUG = env_bool("DEBUG", required=True)
 IS_PRODUCTION = DJANGO_ENV == "production" or not DEBUG
 
 SECRET_KEY = env("DJANGO_SECRET_KEY", required=True)
-ALLOWED_HOSTS = env_list(
-    "ALLOWED_HOSTS",
-    required=True,
-    aliases=("DJANGO_ALLOWED_HOSTS",),
-)
+ALLOWED_HOSTS = env_list("ALLOWED_HOSTS", required=True)
 CSRF_TRUSTED_ORIGINS = env_list("DJANGO_CSRF_TRUSTED_ORIGINS")
 
 INSTALLED_APPS = [
@@ -129,14 +121,14 @@ WSGI_APPLICATION = "config.wsgi.application"
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": env("DB_NAME", required=True, aliases=("POSTGRES_DB",)),
-        "USER": env("DB_USER", required=True, aliases=("POSTGRES_USER",)),
-        "PASSWORD": env("DB_PASSWORD", required=True, aliases=("POSTGRES_PASSWORD",)),
-        "HOST": env("DB_HOST", required=True, aliases=("POSTGRES_HOST",)),
-        "PORT": env("DB_PORT", "5432", required=True, aliases=("POSTGRES_PORT",)),
-        "CONN_MAX_AGE": env_int("DB_CONN_MAX_AGE", 60, aliases=("POSTGRES_CONN_MAX_AGE",)),
+        "NAME": env("DB_NAME", required=True),
+        "USER": env("DB_USER", required=True),
+        "PASSWORD": env("DB_PASSWORD", required=True),
+        "HOST": env("DB_HOST", required=True),
+        "PORT": env("DB_PORT", "5432", required=True),
+        "CONN_MAX_AGE": env_int("DB_CONN_MAX_AGE", 60),
         "OPTIONS": {
-            "sslmode": env("DB_SSLMODE", "prefer", aliases=("POSTGRES_SSLMODE",)),
+            "sslmode": env("DB_SSLMODE", "prefer"),
         },
     }
 }
@@ -179,11 +171,11 @@ MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
 SECURE_SSL_REDIRECT = env_bool("DJANGO_SECURE_SSL_REDIRECT", False)
-SESSION_COOKIE_SECURE = env_bool("DJANGO_SESSION_COOKIE_SECURE", not DEBUG)
-CSRF_COOKIE_SECURE = env_bool("DJANGO_CSRF_COOKIE_SECURE", not DEBUG)
+SESSION_COOKIE_SECURE = env_bool("DJANGO_SESSION_COOKIE_SECURE", IS_PRODUCTION)
+CSRF_COOKIE_SECURE = env_bool("DJANGO_CSRF_COOKIE_SECURE", IS_PRODUCTION)
 SECURE_HSTS_SECONDS = env_int("DJANGO_SECURE_HSTS_SECONDS", 0)
-SECURE_HSTS_INCLUDE_SUBDOMAINS = env_bool("DJANGO_SECURE_HSTS_INCLUDE_SUBDOMAINS", not DEBUG)
-SECURE_HSTS_PRELOAD = env_bool("DJANGO_SECURE_HSTS_PRELOAD", not DEBUG)
+SECURE_HSTS_INCLUDE_SUBDOMAINS = env_bool("DJANGO_SECURE_HSTS_INCLUDE_SUBDOMAINS", IS_PRODUCTION)
+SECURE_HSTS_PRELOAD = env_bool("DJANGO_SECURE_HSTS_PRELOAD", IS_PRODUCTION)
 SECURE_CONTENT_TYPE_NOSNIFF = True
 X_FRAME_OPTIONS = "DENY"
 
@@ -191,4 +183,3 @@ if env_bool("DJANGO_USE_X_FORWARDED_PROTO", True):
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
-

@@ -1,9 +1,44 @@
-﻿# inspection_system
+# inspection_system
 
 ระบบ Django + PostgreSQL สำหรับบันทึกและติดตามงานตรวจสอบคุณภาพในสายการผลิต โดยฐานข้อมูลแบ่งเป็น 2 ส่วนหลัก:
 
 - Master Data: ไลน์ผลิต, ประเภท defect, เงื่อนไขทดสอบ, inspector, result type
 - Transaction Data: test session, test round, inspection record, defect record, verification record
+
+## Quick Start
+
+1. Clone repository
+2. Copy .env.example to .env
+3. Replace every CHANGE_ME value
+4. Run:
+
+```powershell
+docker compose up --build
+```
+
+5. Open:
+
+http://localhost:8000
+
+## Deployment Commands
+
+Generate `DJANGO_SECRET_KEY`:
+
+```powershell
+python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
+```
+
+Create a superuser:
+
+```powershell
+docker compose exec web python manage.py createsuperuser
+```
+
+Stop containers:
+
+```powershell
+docker compose down
+```
 
 ## Prompt DB ทั้งหมด
 
@@ -348,105 +383,35 @@ CREATE INDEX verify_result_date_idx ON inspection_verificationrecord (result, in
 
 ## Environment Variables
 
-Django อ่านค่า database จาก environment variables เหล่านี้:
+Docker deployments use `.env`, normally created from `.env.example`. The application reads these variables directly:
 
-| Variable | Default |
+| Variable | Purpose |
 | --- | --- |
-| `POSTGRES_DB` | `inspection_system` |
-| `POSTGRES_USER` | `postgres` |
-| `POSTGRES_PASSWORD` | `postgres` |
-| `POSTGRES_HOST` | `localhost` |
-| `POSTGRES_PORT` | `5432` |
+| `DJANGO_ENV` | Runtime environment name. Use `production` for Docker and server deployments. |
+| `DEBUG` | Enables or disables Django debug output. |
+| `DJANGO_SECRET_KEY` | Required Django signing key. Replace `CHANGE_ME` before startup. |
+| `ALLOWED_HOSTS` | Comma-separated hostnames or IPs allowed to serve the site. |
+| `DJANGO_CSRF_TRUSTED_ORIGINS` | Optional comma-separated trusted origins for CSRF validation. |
+| `DJANGO_SECURE_SSL_REDIRECT` | Redirect HTTP requests to HTTPS when enabled. |
+| `DJANGO_SESSION_COOKIE_SECURE` | Marks session cookies as HTTPS-only when enabled. |
+| `DJANGO_CSRF_COOKIE_SECURE` | Marks CSRF cookies as HTTPS-only when enabled. |
+| `DJANGO_SECURE_HSTS_SECONDS` | HSTS max-age in seconds. Use `0` to disable. |
+| `DJANGO_SECURE_HSTS_INCLUDE_SUBDOMAINS` | Includes subdomains in HSTS when enabled. |
+| `DJANGO_SECURE_HSTS_PRELOAD` | Enables HSTS preload eligibility when enabled. |
+| `DJANGO_USE_X_FORWARDED_PROTO` | Trusts reverse proxy `X-Forwarded-Proto` for HTTPS detection. |
+| `DB_NAME` | PostgreSQL database name. |
+| `DB_USER` | PostgreSQL username. |
+| `DB_PASSWORD` | PostgreSQL password. Replace `CHANGE_ME` before startup. |
+| `DB_HOST` | PostgreSQL host. Use `db` for Docker Compose. |
+| `DB_PORT` | PostgreSQL port. |
+| `DB_WAIT_TIMEOUT` | Seconds the startup script waits for PostgreSQL. |
+| `DB_CONN_MAX_AGE` | Django persistent database connection lifetime in seconds. |
+| `DB_SSLMODE` | PostgreSQL SSL mode for Django connections. |
+| `GUNICORN_WORKERS` | Number of Gunicorn worker processes. |
+| `GUNICORN_TIMEOUT` | Gunicorn worker timeout in seconds. |
+| `GUNICORN_LOG_LEVEL` | Gunicorn log level. |
 
-
-## Prompt การเชื่อมต่อ DB
-
-ใช้ prompt นี้เมื่อต้องการให้ AI ช่วยตั้งค่า, ตรวจสอบ, หรือแก้ปัญหาการเชื่อมต่อ PostgreSQL ของโปรเจกต์นี้
-
-```text
-คุณคือ senior Django/PostgreSQL engineer ช่วยตั้งค่าการเชื่อมต่อฐานข้อมูลให้โปรเจกต์ Django ชื่อ inspection_system
-
-บริบทโปรเจกต์:
-- Framework: Django 5
-- Database: PostgreSQL
-- Settings module: config/settings.py
-- ใช้ database backend: django.db.backends.postgresql
-- App หลัก: apps.inspection
-- Time zone: Asia/Bangkok
-- Default primary key: django.db.models.BigAutoField
-
-ค่าการเชื่อมต่อฐานข้อมูลต้องอ่านจาก environment variables และมีค่า default สำหรับเครื่อง development ดังนี้:
-- POSTGRES_DB default เป็น inspection_system
-- POSTGRES_USER default เป็น postgres
-- POSTGRES_PASSWORD default เป็น postgres
-- POSTGRES_HOST default เป็น localhost
-- POSTGRES_PORT default เป็น 5432
-
-ต้องเขียน DATABASES ใน config/settings.py รูปแบบนี้:
-
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": os.environ.get("POSTGRES_DB", "inspection_system"),
-        "USER": os.environ.get("POSTGRES_USER", "postgres"),
-        "PASSWORD": os.environ.get("POSTGRES_PASSWORD", "postgres"),
-        "HOST": os.environ.get("POSTGRES_HOST", "localhost"),
-        "PORT": os.environ.get("POSTGRES_PORT", "5432"),
-    }
-}
-
-ช่วยตรวจสอบให้ครบ:
-1. import os แล้วหรือยัง
-2. ติดตั้ง driver PostgreSQL สำหรับ Django แล้วหรือยัง เช่น psycopg2-binary หรือ psycopg
-3. PostgreSQL service เปิดอยู่หรือไม่
-4. database ชื่อ inspection_system มีอยู่หรือไม่
-5. user/password ถูกต้องหรือไม่
-6. host/port เชื่อมต่อได้หรือไม่
-7. หลังแก้ config ให้รัน python manage.py check และ python manage.py migrate
-
-ถ้าต้องสร้าง database ใน PostgreSQL ให้ใช้คำสั่งตัวอย่าง:
-CREATE DATABASE inspection_system;
-
-ถ้าต้องตั้งค่าใน PowerShell สำหรับ development ให้ใช้:
-$env:POSTGRES_DB="inspection_system"
-$env:POSTGRES_USER="postgres"
-$env:POSTGRES_PASSWORD="postgres"
-$env:POSTGRES_HOST="localhost"
-$env:POSTGRES_PORT="5432"
-
-ถ้าต้องตั้งค่าใน .env ให้ใช้:
-POSTGRES_DB=inspection_system
-POSTGRES_USER=postgres
-POSTGRES_PASSWORD=postgres
-POSTGRES_HOST=localhost
-POSTGRES_PORT=5432
-
-โปรดอธิบายขั้นตอนแบบสั้น ชัดเจน และให้คำสั่งที่รันได้บน Windows PowerShell
-```
-
-## ตัวอย่าง DATABASES ใน Django
-
-```python
-import os
-
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": os.environ.get("POSTGRES_DB", "inspection_system"),
-        "USER": os.environ.get("POSTGRES_USER", "postgres"),
-        "PASSWORD": os.environ.get("POSTGRES_PASSWORD", "postgres"),
-        "HOST": os.environ.get("POSTGRES_HOST", "localhost"),
-        "PORT": os.environ.get("POSTGRES_PORT", "5432"),
-    }
-}
-```
-
-## คำสั่งตรวจสอบการเชื่อมต่อ DB
-
-```powershell
-python manage.py check
-python manage.py migrate
-```
+`docker-compose.yml` maps `DB_NAME`, `DB_USER`, and `DB_PASSWORD` to the official Postgres image variables internally. Do not add separate `POSTGRES_*` values to `.env`.
 
 ## Django Commands
 
@@ -456,7 +421,6 @@ python manage.py migrate
 python manage.py createsuperuser
 python manage.py runserver
 ```
-
 ## Seed Data แนะนำ
 
 ควรมี master data เริ่มต้นอย่างน้อย:
