@@ -40,8 +40,8 @@ def env(name, default=None, required=False, aliases=()):
     return value
 
 
-def env_bool(name, default=False, aliases=()):
-    value = env(name, aliases=aliases)
+def env_bool(name, default=None, required=False, aliases=()):
+    value = env(name, required=required, aliases=aliases)
     if value is None:
         return default
     normalized = value.strip().lower()
@@ -49,7 +49,7 @@ def env_bool(name, default=False, aliases=()):
         return True
     if normalized in {"0", "false", "no", "off"}:
         return False
-    return default
+    raise RuntimeError(f"Invalid boolean value for {name}: {value}")
 
 
 def env_int(name, default=0, aliases=()):
@@ -69,18 +69,13 @@ def env_list(name, default=None, required=False, aliases=()):
 load_env_file(BASE_DIR / ".env")
 
 DJANGO_ENV = env("DJANGO_ENV", "development").strip().lower()
-DEBUG = env_bool("DEBUG", DJANGO_ENV != "production", aliases=("DJANGO_DEBUG",))
+DEBUG = env_bool("DEBUG", required=True, aliases=("DJANGO_DEBUG",))
 IS_PRODUCTION = DJANGO_ENV == "production" or not DEBUG
 
-SECRET_KEY = env(
-    "DJANGO_SECRET_KEY",
-    "django-insecure-local-development-only-change-me",
-    required=IS_PRODUCTION,
-)
+SECRET_KEY = env("DJANGO_SECRET_KEY", required=True)
 ALLOWED_HOSTS = env_list(
     "ALLOWED_HOSTS",
-    ["127.0.0.1", "localhost"],
-    required=IS_PRODUCTION,
+    required=True,
     aliases=("DJANGO_ALLOWED_HOSTS",),
 )
 CSRF_TRUSTED_ORIGINS = env_list("DJANGO_CSRF_TRUSTED_ORIGINS")

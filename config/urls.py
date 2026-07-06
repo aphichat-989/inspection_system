@@ -16,6 +16,8 @@ Including another URLconf
 """
 
 from django.contrib import admin
+from django.db import connection
+from django.http import JsonResponse
 from django.shortcuts import redirect
 from django.urls import include, path
 
@@ -24,7 +26,15 @@ def home_redirect(request):
     return redirect("inspection:dashboard")
 
 
+def healthz(request):
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT 1")
+        cursor.fetchone()
+    return JsonResponse({"status": "ok"})
+
+
 urlpatterns = [
+    path("healthz/", healthz, name="healthz"),
     path("", home_redirect, name="home"),
     path("admin/", admin.site.urls),
     path("inspection/", include(("apps.inspection.urls", "inspection"), namespace="inspection")),
