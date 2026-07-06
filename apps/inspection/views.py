@@ -34,6 +34,7 @@ from .views_master_data import (
     TestConditionUpdateView,
 )
 from .views_sessions import (
+    InspectionBulkDeleteView,
     InspectionCreateView,
     InspectionDeleteView,
     InspectionDetailView,
@@ -61,6 +62,7 @@ __all__ = [
     "record_inspection_round",
     "test_summary",
     "InspectionListView",
+    "InspectionBulkDeleteView",
     "InspectionCreateView",
     "InspectionDetailView",
     "InspectionUpdateView",

@@ -27,20 +27,22 @@
         </div>
     </form>
 
-    <div class="panel">
+    <form method="post" action="{% url 'inspection:bulk_delete' %}" class="panel" data-bulk-delete-form>
+        {% csrf_token %}
         <div class="panel-header">
             <div><h5 class="mb-1 fw-bold">Session Log</h5><p class="text-muted small mb-0">Latest test sessions first</p></div>
             <div class="d-flex gap-2 flex-wrap justify-content-end">
                 <span class="chip session-total-chip"><i class="bi bi-database"></i>ทั้งหมด {{ paginator.count }} รายการ</span>
-                <span class="chip"><i class="bi bi-list-ul"></i>Sessions</span>
+                <button type="submit" class="btn btn-outline-danger btn-sm btn-icon" data-bulk-delete-button disabled><i class="bi bi-trash"></i>ลบรายการที่เลือก</button>
             </div>
         </div>
         <div class="session-table-scroll">
             <table class="table table-modern table-hover align-middle">
-                <thead><tr><th class="row-number">ลำดับ</th><th>Session</th><th>Date</th><th>Line</th><th>Condition</th><th>Inspector</th><th>Status</th><th class="text-end">Action</th></tr></thead>
+                <thead><tr><th class="bulk-select-cell"><input class="form-check-input" type="checkbox" data-select-all-sessions aria-label="Select all sessions"></th><th class="row-number">ลำดับ</th><th>Session</th><th>Date</th><th>Line</th><th>Condition</th><th>Inspector</th><th>Status</th><th class="text-end">Action</th></tr></thead>
                 <tbody>
                     {% for session in sessions %}
                     <tr>
+                        <td class="bulk-select-cell"><input class="form-check-input" type="checkbox" name="selected_sessions" value="{{ session.pk }}" data-session-checkbox aria-label="Select {{ session.session_number }}"></td>
                         <td class="row-number">{% if page_obj %}{{ page_obj.start_index|add:forloop.counter0 }}{% else %}{{ forloop.counter }}{% endif %}</td>
                         <td class="fw-bold">{{ session.session_number }}</td>
                         <td>{{ session.inspection_date }}</td>
@@ -57,11 +59,15 @@
                         </td>
                     </tr>
                     {% empty %}
-                    <tr><td colspan="8"><div class="empty-state"><i class="bi bi-clipboard2-x"></i><div class="fw-semibold mt-2">No test sessions found.</div></div></td></tr>
+                    <tr><td colspan="9"><div class="empty-state"><i class="bi bi-clipboard2-x"></i><div class="fw-semibold mt-2">No test sessions found.</div></div></td></tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
-    </div>
+    </form>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'inspection/js/list.js' %}"></script>
 {% endblock %}

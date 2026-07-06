@@ -88,7 +88,7 @@ class VerificationRecordForm(forms.ModelForm):
         labels = {
             "inspection_date": "วันที่",
             "defect_type": "Defect model",
-            "test_condition": "Condition",
+            "test_condition": "Test Condition",
             "result": "Result",
             "round_no": "ครั้งที่",
             "found_count": "ตรวจเจอ",

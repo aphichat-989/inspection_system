@@ -20,4 +20,6 @@
         .session-list-page .panel-header > div:last-child { width: 100%; justify-content: stretch !important; }
         .session-list-page .panel-header .chip { flex: 1 1 auto; }
     }
-
+.bulk-select-cell { width: 52px; text-align: center; }
+.bulk-select-cell .form-check-input { cursor: pointer; }
+[data-bulk-delete-button]:disabled { cursor: not-allowed; opacity: 0.55; }

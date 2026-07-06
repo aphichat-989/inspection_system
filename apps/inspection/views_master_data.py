@@ -205,8 +205,8 @@ class TestConditionCreateView(MasterDataCreateView):
     model = TestCondition
     form_class = TestConditionForm
     page_title = "เพิ่มประเภทการทดสอบ"
-    name_help = "กรอกเงื่อนไขทดสอบ เช่น Normal Light, Low Light, Oil Condition"
-    description_help = "อธิบายเงื่อนไข เช่น Test under normal factory lighting"
+    name_help = "กรอกประเภทการทดสอบ เช่น Normal Light, Low Light, Oil Condition"
+    description_help = "อธิบายประเภทการทดสอบ เช่น Test under normal factory lighting"
     active_help = "เปิดใช้งานเพื่อให้เลือกได้ในหน้า Create New Test Session"
     success_url_name = "inspection:test_condition_list"
 
@@ -215,8 +215,8 @@ class TestConditionUpdateView(MasterDataUpdateView):
     model = TestCondition
     form_class = TestConditionForm
     page_title = "แก้ไขประเภทการทดสอบ"
-    name_help = "กรอกเงื่อนไขทดสอบ เช่น Normal Light, Low Light, Oil Condition"
-    description_help = "อธิบายเงื่อนไข เช่น Test under normal factory lighting"
+    name_help = "กรอกประเภทการทดสอบ เช่น Normal Light, Low Light, Oil Condition"
+    description_help = "อธิบายประเภทการทดสอบ เช่น Test under normal factory lighting"
     active_help = "เปิดใช้งานเพื่อให้เลือกได้ในหน้า Create New Test Session"
     success_url_name = "inspection:test_condition_list"
 

@@ -7,6 +7,7 @@ urlpatterns = [
     path("", views.DashboardView.as_view(), name="dashboard"),
     path("list/", views.InspectionListView.as_view(), name="list"),
     path("new/", views.InspectionCreateView.as_view(), name="create"),
+    path("bulk-delete/", views.InspectionBulkDeleteView.as_view(), name="bulk_delete"),
     path("<int:pk>/", views.InspectionDetailView.as_view(), name="detail"),
     path("<int:pk>/edit/", views.InspectionUpdateView.as_view(), name="update"),
     path("<int:pk>/delete/", views.InspectionDeleteView.as_view(), name="delete"),

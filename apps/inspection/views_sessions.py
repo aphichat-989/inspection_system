@@ -3,6 +3,7 @@ from django.db import transaction
 from django.db.models import Prefetch
 from django.http import HttpResponseBadRequest, HttpResponseRedirect
 from django.urls import reverse, reverse_lazy
+from django.views import View
 from django.views.generic import CreateView, DeleteView, DetailView, ListView, UpdateView
 
 from .forms import TestSessionForm
@@ -231,6 +232,26 @@ class InspectionDetailView(DetailView):
             }
         )
         return context
+
+
+class InspectionBulkDeleteView(View):
+    success_url = reverse_lazy("inspection:list")
+
+    def post(self, request, *args, **kwargs):
+        selected_ids = request.POST.getlist("selected_sessions")
+        if not selected_ids:
+            messages.warning(request, "Please select at least one Test Session to delete.")
+            return HttpResponseRedirect(self.success_url)
+
+        queryset = InspectionSession.objects.filter(pk__in=selected_ids)
+        deleted_count = queryset.count()
+        if not deleted_count:
+            messages.warning(request, "Selected Test Sessions were not found.")
+            return HttpResponseRedirect(self.success_url)
+
+        queryset.delete()
+        messages.success(request, f"Deleted {deleted_count} Test Session(s).")
+        return HttpResponseRedirect(self.success_url)
 
 
 class InspectionDeleteView(DeleteView):

@@ -186,3 +186,22 @@ class InspectionWorkflowTests(TestCase):
         self.assertEqual(test.completed_rounds, 2)
         self.assertEqual(test.rounds.count(), 2)
         self.assertEqual(session.status, InspectionSession.STATUS_COMPLETED)
+    def test_bulk_delete_removes_only_selected_sessions(self):
+        selected_session, _ = self.create_session_with_test(total_rounds=5)
+        kept_session = InspectionSession.objects.create(
+            session_number="TS20260703-0002",
+            inspection_date=date(2026, 7, 3),
+            line=self.line,
+            test_condition=self.condition,
+            inspector=self.inspector,
+            status=InspectionSession.STATUS_IN_PROGRESS,
+        )
+
+        response = self.client.post(
+            reverse("inspection:bulk_delete"),
+            {"selected_sessions": [str(selected_session.pk)]},
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertFalse(InspectionSession.objects.filter(pk=selected_session.pk).exists())
+        self.assertTrue(InspectionSession.objects.filter(pk=kept_session.pk).exists())
