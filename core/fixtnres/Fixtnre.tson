@@ -1,0 +1,92 @@
+{
+  "production_lines": [
+    {
+      "name": "Line A",
+      "description": "Default production line A.",
+      "is_active": true
+    },
+    {
+      "name": "Line B",
+      "description": "Default production line B.",
+      "is_active": true
+    }
+  ],
+  "defect_types": [
+    {
+      "name": "Kanban Mismatch",
+      "description": "Kanban or label data does not match the part.",
+      "is_active": true
+    },
+    {
+      "name": "Bush Vertical Defect",
+      "description": "Bush vertical position or condition is incorrect.",
+      "is_active": true
+    },
+    {
+      "name": "Spatter",
+      "description": "Welding spatter or surface contamination is present.",
+      "is_active": true
+    },
+    {
+      "name": "Forgotten Bush Vertical",
+      "description": "Bush vertical part is missing.",
+      "is_active": true
+    },
+    {
+      "name": "Not Enter Bush Vertical",
+      "description": "Bush vertical part is not inserted correctly.",
+      "is_active": true
+    },
+    {
+      "name": "Bush Vertical Misaligned",
+      "description": "Bush vertical part is misaligned.",
+      "is_active": true
+    },
+    {
+      "name": "Stopper Leak",
+      "description": "Leak detected at stopper area.",
+      "is_active": true
+    },
+    {
+      "name": "Round Recline Leak",
+      "description": "Leak detected at round recline area.",
+      "is_active": true
+    }
+  ],
+  "test_conditions": [
+    {
+      "name": "Normal Light",
+      "description": "Test under normal factory lighting.",
+      "is_active": true
+    },
+    {
+      "name": "Low Light",
+      "description": "Test under reduced lighting.",
+      "is_active": true
+    },
+    {
+      "name": "Oil Condition",
+      "description": "Test with oil or reflective condition present.",
+      "is_active": true
+    }
+  ],
+  "inspectors": [
+    {
+      "name": "Inspector A",
+      "description": "Default inspector.",
+      "is_active": true
+    }
+  ],
+  "inspection_result_types": [
+    {
+      "name": "Found",
+      "description": "Defect was detected during the test round.",
+      "is_active": true
+    },
+    {
+      "name": "Not Found",
+      "description": "Defect was not detected during the test round.",
+      "is_active": true
+    }
+  ]
+}

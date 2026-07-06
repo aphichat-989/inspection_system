@@ -52,7 +52,7 @@
         body.sidebar-collapsed .brand-copy, body.sidebar-collapsed .brand-mark { display: none; }
         body.sidebar-collapsed .sidebar-brand-row { justify-content: center !important; }
         body.sidebar-collapsed .sidebar .nav-link { justify-content: center; min-height: 48px; padding: 0.82rem 0.6rem; font-size: 0; }
-        body.sidebar-collapsed .sidebar .nav-link i { margin-right: 0 !important; font-size: 1.16rem; }
+        body.sidebar-collapsed .sidebar .nav-link i { font-size: 1.16rem; }
         body.sidebar-collapsed .sidebar .nav-link.active::before { left: -0.55rem; }
         body.sidebar-collapsed .sidebar-toggle .bi-layout-sidebar-inset { transform: rotate(180deg); }
         .brand-mark {
@@ -83,6 +83,7 @@
         .sidebar .nav-link {
             display: flex;
             align-items: center;
+            gap: 0.55rem;
             color: #d9e8f6;
             border-radius: 8px;
             padding: 0.84rem 0.9rem;
@@ -90,8 +91,10 @@
             font-weight: 800;
             border: 1px solid transparent;
             position: relative;
+            line-height: 1.25;
         }
-        .sidebar .nav-link i { color: #64d6ff; }
+        .sidebar .nav-link i { color: #64d6ff; flex: 0 0 1.16rem; margin-right: 0 !important; text-align: center; }
+        .sidebar .nav-link span { min-width: 0; overflow-wrap: anywhere; }
         .sidebar .nav-link:hover, .sidebar .nav-link.active {
             background: rgba(0,168,232,0.16);
             color: #ffffff;
@@ -295,12 +298,12 @@
                     <button type="button" class="sidebar-toggle" data-sidebar-toggle aria-label="Toggle sidebar" title="Toggle sidebar"><i class="bi bi-layout-sidebar-inset"></i></button>
                 </div>
                 <nav class="nav flex-column">
-                    <a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'inspection:dashboard' %}"><i class="bi bi-speedometer2 me-2"></i>Dashboard</a>
-                    <a class="nav-link {% if request.resolver_match.url_name == 'list' or request.resolver_match.url_name == 'create' or request.resolver_match.url_name == 'detail' or request.resolver_match.url_name == 'update' or request.resolver_match.url_name == 'delete' %}active{% endif %}" href="{% url 'inspection:list' %}"><i class="bi bi-clipboard2-pulse me-2"></i>Test Sessions</a>
-                    <a class="nav-link {% if 'test_condition' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'inspection:test_condition_list' %}"><i class="bi bi-sliders me-2"></i>Test Conditions</a>
-                    <a class="nav-link {% if 'defect_type' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'inspection:defect_type_list' %}"><i class="bi bi-exclamation-diamond me-2"></i>Defect Types</a>
-                    <a class="nav-link {% if 'production_line' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'inspection:production_line_list' %}"><i class="bi bi-diagram-3 me-2"></i>Production Lines</a>
-                    <a class="nav-link {% if 'inspector' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'inspection:inspector_list' %}"><i class="bi bi-person-badge me-2"></i>Inspectors</a>
+                    <a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'inspection:dashboard' %}"><i class="bi bi-speedometer2 me-2"></i><span>Dashboard</span></a>
+                    <a class="nav-link {% if request.resolver_match.url_name == 'list' or request.resolver_match.url_name == 'create' or request.resolver_match.url_name == 'detail' or request.resolver_match.url_name == 'update' or request.resolver_match.url_name == 'delete' %}active{% endif %}" href="{% url 'inspection:list' %}"><i class="bi bi-clipboard2-pulse me-2"></i><span>Test Sessions</span></a>
+                    <a class="nav-link {% if 'test_condition' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'inspection:test_condition_list' %}"><i class="bi bi-sliders me-2"></i><span>ประเภทการทดสอบ</span></a>
+                    <a class="nav-link {% if 'defect_type' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'inspection:defect_type_list' %}"><i class="bi bi-exclamation-diamond me-2"></i><span>Defect Types</span></a>
+                    <a class="nav-link {% if 'production_line' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'inspection:production_line_list' %}"><i class="bi bi-diagram-3 me-2"></i><span>Production Lines</span></a>
+                    <a class="nav-link {% if 'inspector' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'inspection:inspector_list' %}"><i class="bi bi-person-badge me-2"></i><span>Inspectors</span></a>
                 </nav>
             </aside>
 

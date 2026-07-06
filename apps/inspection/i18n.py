@@ -194,7 +194,7 @@ TRANSLATIONS = {
         "Automation QA": "ระบบตรวจสอบอัตโนมัติ",
         "Dashboard": "แดชบอร์ด",
         "Test Sessions": "รอบการทดสอบ",
-        "Test Conditions": "เงื่อนไขทดสอบ",
+        "Test Conditions": "ประเภทการทดสอบ",
         "Defect Types": "ประเภทของเสีย",
         "Production Lines": "ไลน์ผลิต",
         "Inspectors": "ผู้ทดสอบ",
