@@ -1,18 +1,11 @@
 {% extends 'inspection/base.html' %}
+{% load static %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'inspection/css/master_data_form.css' %}">
+{% endblock %}
 
 {% block content %}
-<style>
-    .master-form-page { max-width: 980px; margin: 0 auto; }
-    .master-form-grid { display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: 1rem; align-items: start; }
-    .master-help-panel { background: #f8fafc; border: 1px solid var(--line); border-radius: 8px; padding: 1rem; }
-    .master-help-item { display: flex; gap: 0.7rem; padding: 0.8rem 0; border-bottom: 1px solid #eeeeee; }
-    .master-help-item:last-child { border-bottom: 0; padding-bottom: 0; }
-    .master-help-icon { width: 34px; height: 34px; border-radius: 8px; background: var(--blue-soft); color: var(--blue-dark); display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; }
-    .master-field { background: #fff; border: 1px solid #eeeeee; border-radius: 8px; padding: 0.95rem; }
-    .status-tile { background: #f8fafc; border: 1px solid var(--line); border-radius: 8px; padding: 1rem; }
-    @media (max-width: 991.98px) { .master-form-grid { grid-template-columns: 1fr; } }
-</style>
-
 <div class="master-form-page">
     <div class="page-head">
         <div>

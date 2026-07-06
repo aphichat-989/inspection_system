@@ -1,37 +1,11 @@
 {% extends 'inspection/base.html' %}
+{% load static %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'inspection/css/detail.css' %}">
+{% endblock %}
 
 {% block content %}
-<style>
-    .session-header-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 0.75rem; }
-    .round-panel { border: 1px solid #dbe3ef; border-radius: 8px; background: #fff; padding: 1.25rem; }
-    .round-result-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
-    .round-result-btn { min-height: 112px; font-size: 1.3rem; font-weight: 900; border-width: 2px; }
-    .round-result-btn.active { color: #fff; }
-    .round-result-btn[data-result-button="found"].active { background: #198754; border-color: #198754; }
-    .round-result-btn[data-result-button="not_found"].active { background: #dc3545; border-color: #dc3545; }
-    .current-round-number { font-size: clamp(2.6rem, 7vw, 5rem); font-weight: 900; line-height: 1; }
-    .summary-sidebar { position: sticky; top: 1rem; }
-    .summary-defect-card { border: 1px solid #dbe3ef; border-radius: 8px; background: #fff; box-shadow: 0 10px 24px rgba(15,23,42,0.05); }
-    .status-badge { display: inline-flex; align-items: center; gap: 0.35rem; border-radius: 999px; padding: 0.35rem 0.7rem; font-weight: 800; font-size: 0.85rem; }
-    .status-finished { background: #dcfce7; color: #166534; }
-    .status-active { background: #dbeafe; color: #1d4ed8; }
-    @media (max-width: 1199.98px) { .session-header-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } .summary-sidebar { position: static; } }
-    @media (max-width: 767.98px) {
-        .session-header-grid { grid-template-columns: 1fr; }
-        .round-panel { padding: 1rem; }
-        .round-result-grid { grid-template-columns: 1fr; }
-        .round-result-btn { min-height: 88px; width: 100%; }
-        .summary-defect-card { padding: 0.9rem !important; }
-        #testing-form > .row { --bs-gutter-y: 1rem; }
-        #testing-form .action-row { flex-direction: column; }
-        #testing-form .action-row .btn { width: 100%; justify-content: center; }
-    }
-    @media (max-width: 420px) {
-        .summary-defect-card h4, .factory-card-header h3 { font-size: 1.1rem; }
-        .round-result-btn { font-size: 1.1rem; }
-    }
-</style>
-
 <div class="page-head">
     <div>
         <h3 class="page-title">{% if show_summary %}Session Summary{% else %}Testing Screen{% endif %}</h3>
@@ -211,28 +185,10 @@
             </div>
         </div>
     </div>
-</form>
-
-<script>
-    (function () {
-        const form = document.getElementById("testing-form");
-        const selectedResult = document.getElementById("selected-result");
-        const saveButton = document.getElementById("save-round");
-        const buttons = Array.from(document.querySelectorAll("[data-result-button]"));
-        buttons.forEach((button) => {
-            button.addEventListener("click", () => {
-                buttons.forEach((other) => other.classList.remove("active"));
-                button.classList.add("active");
-                if (selectedResult) { selectedResult.value = button.dataset.resultButton; }
-                if (saveButton) { saveButton.disabled = false; }
-            });
-        });
-        if (form) {
-            form.addEventListener("submit", () => {
-                if (saveButton && selectedResult && selectedResult.value) { saveButton.disabled = true; }
-            });
-        }
-    })();
-</script>
-{% endif %}
+</form>{% endif %}
 {% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'inspection/js/detail.js' %}"></script>
+{% endblock %}
+

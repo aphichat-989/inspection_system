@@ -1,41 +1,11 @@
 {% extends 'inspection/base.html' %}
+{% load static %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'inspection/css/form.css' %}">
+{% endblock %}
 
 {% block content %}
-<style>
-    .session-form-page { max-width: 1240px; margin: 0 auto; }
-    .setup-strip { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.75rem; margin-bottom: 1rem; }
-    .setup-step { background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: 0.85rem 0.95rem; display: flex; align-items: center; gap: 0.75rem; min-height: 72px; }
-    .setup-step-icon { width: 38px; height: 38px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; background: var(--blue-soft); color: var(--blue-dark); flex: 0 0 auto; }
-    .field-shell { height: 100%; background: #f8fafc; border: 1px solid #eeeeee; border-radius: 8px; padding: 0.9rem; }
-    .field-shell .form-label { display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.45rem; }
-    .required-dot { width: 0.42rem; height: 0.42rem; border-radius: 50%; background: #dc2626; display: inline-block; }
-    .defect-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap; }
-    .defect-card { position: relative; height: 100%; border: 1px solid var(--line); border-radius: 8px; background: #fff; padding: 1rem; cursor: pointer; transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease; }
-    .defect-card:hover { border-color: var(--blue); box-shadow: 0 10px 22px rgba(82,179,230,0.12); transform: translateY(-1px); }
-    .defect-card.active { border-color: var(--blue-dark); background: #f3fbff; box-shadow: 0 12px 24px rgba(82,179,230,0.16); }
-    .defect-check { width: 1.35rem; height: 1.35rem; }
-    .round-config-row { display: none; }
-    .round-config-row.active { display: flex; }
-    .round-input { max-width: 160px; min-height: 48px; font-size: 1.1rem; font-weight: 800; text-align: center; }
-    .sticky-actions { position: sticky; bottom: 0; z-index: 5; background: rgba(237,242,247,0.94); backdrop-filter: blur(8px); border-top: 1px solid var(--line); padding: 1rem 0 0; }
-    @media (max-width: 991.98px) { .setup-strip { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-    @media (max-width: 767.98px) {
-        .setup-strip { grid-template-columns: 1fr; }
-        .setup-step { min-height: 0; padding: 0.75rem; }
-        .field-shell { padding: 0.8rem; }
-        .defect-toolbar { align-items: stretch; }
-        .defect-toolbar .btn { width: 100%; justify-content: center; }
-        .defect-card { padding: 0.85rem; }
-        .round-config-row.active { align-items: stretch !important; flex-direction: column; }
-        .round-config-row .input-group { max-width: 100% !important; }
-        .round-input { max-width: none; min-width: 0; }
-    }
-    @media (max-width: 420px) {
-        .setup-step-icon { width: 34px; height: 34px; }
-        .defect-check { width: 1.15rem; height: 1.15rem; }
-    }
-</style>
-
 <div class="session-form-page">
     <div class="page-head">
         <div>
@@ -196,36 +166,9 @@
             <button type="submit" class="btn btn-primary btn-lg touch-button px-4"><i class="bi {% if form.instance.pk %}bi-save{% else %}bi-play-circle{% endif %} me-1"></i>{% if form.instance.pk %}Save Changes{% else %}Start Testing{% endif %}</button>
         </div>
     </form>
-</div>
+</div>{% endblock %}
 
-<script>
-    (function () {
-        const toggles = Array.from(document.querySelectorAll("[data-defect-toggle]"));
-        const roundEmpty = document.getElementById("round-empty");
-        const selectedCount = document.getElementById("selected-defect-count");
-        function syncDefectUi() {
-            let activeCount = 0;
-            toggles.forEach((toggle) => {
-                const id = toggle.dataset.defectToggle;
-                const card = document.querySelector(`[data-defect-card="${id}"]`);
-                const row = document.querySelector(`[data-round-row="${id}"]`);
-                if (card) { card.classList.toggle("active", toggle.checked); }
-                if (row) { row.classList.toggle("active", toggle.checked); }
-                if (toggle.checked) { activeCount += 1; }
-            });
-            if (roundEmpty) { roundEmpty.classList.toggle("d-none", activeCount > 0); }
-            if (selectedCount) { selectedCount.textContent = window.uiTranslate ? window.uiTranslate(`${activeCount} selected`) : `${activeCount} selected`; }
-        }
-        toggles.forEach((toggle) => toggle.addEventListener("change", syncDefectUi));
-        document.querySelectorAll(".round-step").forEach((button) => {
-            button.addEventListener("click", () => {
-                const input = document.getElementById(button.dataset.target);
-                const step = Number(button.dataset.step || 0);
-                if (!input) { return; }
-                input.value = Math.max(1, Number(input.value || 1) + step);
-            });
-        });
-        syncDefectUi();
-    })();
-</script>
+{% block extra_js %}
+<script src="{% static 'inspection/js/form.js' %}"></script>
 {% endblock %}
+

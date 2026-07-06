@@ -33,10 +33,11 @@
     }
 
     document.addEventListener("DOMContentLoaded", function () {
-        if (!document.body.classList.contains("dashboard-page")) {
+        if (!document.querySelector(".dashboard-page")) {
             return;
         }
         updateClock();
         window.setInterval(updateClock, 30000);
     });
 })();
+
