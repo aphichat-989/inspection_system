@@ -1,3 +1,4 @@
+﻿from django.contrib.auth.mixins import LoginRequiredMixin
 from django.urls import reverse_lazy
 from django.views.generic import CreateView, DeleteView, ListView, UpdateView
 
@@ -6,7 +7,7 @@ from .models import DefectType, Inspector, ProductionLine, TestCondition
 from .services import DashboardService
 
 
-class MasterDataListView(ListView):
+class MasterDataListView(LoginRequiredMixin, ListView):
     template_name = "inspection/master_data_list.html"
     context_object_name = "items"
     page_title = ""
@@ -26,7 +27,7 @@ class MasterDataListView(ListView):
         return context
 
 
-class MasterDataCreateView(CreateView):
+class MasterDataCreateView(LoginRequiredMixin, CreateView):
     template_name = "inspection/master_data_form.html"
     page_title = ""
     success_url_name = ""
@@ -49,7 +50,7 @@ class MasterDataCreateView(CreateView):
         return context
 
 
-class MasterDataUpdateView(UpdateView):
+class MasterDataUpdateView(LoginRequiredMixin, UpdateView):
     template_name = "inspection/master_data_form.html"
     page_title = ""
     success_url_name = ""
@@ -72,7 +73,7 @@ class MasterDataUpdateView(UpdateView):
         return context
 
 
-class MasterDataDeleteView(DeleteView):
+class MasterDataDeleteView(LoginRequiredMixin, DeleteView):
     template_name = "inspection/master_data_confirm_delete.html"
     page_title = ""
     success_url_name = ""
@@ -225,3 +226,5 @@ class TestConditionDeleteView(MasterDataDeleteView):
     model = TestCondition
     page_title = "ลบประเภทการทดสอบ"
     success_url_name = "inspection:test_condition_list"
+
+

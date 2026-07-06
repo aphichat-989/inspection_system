@@ -1,11 +1,12 @@
-from datetime import date
+﻿from datetime import date
 
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.views.generic.base import TemplateView
 
 from .models import InspectionSession, InspectionTest
 
 
-class DashboardView(TemplateView):
+class DashboardView(LoginRequiredMixin, TemplateView):
     template_name = "inspection/dashboard.html"
 
     def get_context_data(self, **kwargs):
@@ -29,3 +30,5 @@ class DashboardView(TemplateView):
             }
         )
         return context
+
+

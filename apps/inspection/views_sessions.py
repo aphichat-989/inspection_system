@@ -1,6 +1,7 @@
-from io import BytesIO
+﻿from io import BytesIO
 
 from django.contrib import messages
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db import transaction
 from django.db.models import Count, Prefetch, Q
 from django.http import HttpResponse, HttpResponseBadRequest, HttpResponseRedirect
@@ -47,7 +48,7 @@ class TestSessionListQuerysetMixin:
         return self.apply_filters(self.get_base_queryset()).order_by("-inspection_date", "-created_at")
 
 
-class InspectionListView(TestSessionListQuerysetMixin, ListView):
+class InspectionListView(LoginRequiredMixin, TestSessionListQuerysetMixin, ListView):
     model = InspectionSession
     template_name = "inspection/list.html"
     context_object_name = "sessions"
@@ -62,7 +63,7 @@ class InspectionListView(TestSessionListQuerysetMixin, ListView):
         return context
 
 
-class InspectionSessionExportView(TestSessionListQuerysetMixin, View):
+class InspectionSessionExportView(LoginRequiredMixin, TestSessionListQuerysetMixin, View):
     headers = [
         "Session Number",
         "Inspection Date",
@@ -166,7 +167,7 @@ class TestSessionContextMixin:
         return context
 
 
-class InspectionCreateView(TestSessionContextMixin, CreateView):
+class InspectionCreateView(LoginRequiredMixin, TestSessionContextMixin, CreateView):
     model = InspectionSession
     form_class = TestSessionForm
     template_name = "inspection/form.html"
@@ -199,7 +200,7 @@ class InspectionCreateView(TestSessionContextMixin, CreateView):
         return HttpResponseRedirect(reverse("inspection:detail", kwargs={"pk": self.object.pk}))
 
 
-class InspectionUpdateView(TestSessionContextMixin, UpdateView):
+class InspectionUpdateView(LoginRequiredMixin, TestSessionContextMixin, UpdateView):
     model = InspectionSession
     form_class = TestSessionForm
     template_name = "inspection/form.html"
@@ -226,7 +227,7 @@ class InspectionUpdateView(TestSessionContextMixin, UpdateView):
         return HttpResponseRedirect(reverse("inspection:detail", kwargs={"pk": self.object.pk}))
 
 
-class InspectionDetailView(DetailView):
+class InspectionDetailView(LoginRequiredMixin, DetailView):
     model = InspectionSession
     template_name = "inspection/detail.html"
     context_object_name = "session"
@@ -323,7 +324,7 @@ class InspectionDetailView(DetailView):
         return context
 
 
-class InspectionBulkDeleteView(View):
+class InspectionBulkDeleteView(LoginRequiredMixin, View):
     success_url = reverse_lazy("inspection:list")
 
     def post(self, request, *args, **kwargs):
@@ -343,7 +344,7 @@ class InspectionBulkDeleteView(View):
         return HttpResponseRedirect(self.success_url)
 
 
-class InspectionDeleteView(DeleteView):
+class InspectionDeleteView(LoginRequiredMixin, DeleteView):
     model = InspectionSession
     template_name = "inspection/confirm_delete.html"
     success_url = reverse_lazy("inspection:list")
@@ -351,3 +352,5 @@ class InspectionDeleteView(DeleteView):
     def form_valid(self, form):
         messages.success(self.request, "Test Session deleted.")
         return super().form_valid(form)
+
+
