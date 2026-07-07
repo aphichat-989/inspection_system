@@ -19,7 +19,7 @@ services:
       - staticfiles:/app/staticfiles
       - media:/app/media
     networks:
-      - backend
+      - inspection_backend
     logging: *default-logging
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz/', timeout=5).read()\""]
@@ -37,9 +37,9 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./backups:/backups
+      - ${BACKUP_DIR:-./backups}:/backups
     networks:
-      - backend
+      - inspection_backend
     logging: *default-logging
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
@@ -60,11 +60,11 @@ services:
       - "${PGADMIN_BIND_IP:-127.0.0.1}:${PGADMIN_PORT:-5050}:80"
     volumes:
       - pgadmin_data:/var/lib/pgadmin
-    networks:
-      - backend
     depends_on:
       db:
         condition: service_healthy
+    networks:
+      - inspection_backend
     logging: *default-logging
     healthcheck:
       test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1/misc/ping || exit 1"]
@@ -80,5 +80,5 @@ volumes:
   pgadmin_data:
 
 networks:
-  backend:
+  inspection_backend:
     driver: bridge
