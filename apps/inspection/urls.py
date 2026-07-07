@@ -16,6 +16,10 @@ urlpatterns = [
     path("verification/new/", views.VerificationCreateView.as_view(), name="verification_create"),
     path("verification/<int:pk>/edit/", views.VerificationUpdateView.as_view(), name="verification_update"),
     path("verification/<int:pk>/delete/", views.VerificationDeleteView.as_view(), name="verification_delete"),
+    path("users/", views.UserListView.as_view(), name="user_list"),
+    path("users/new/", views.UserCreateView.as_view(), name="user_create"),
+    path("users/<int:pk>/edit/", views.UserUpdateView.as_view(), name="user_update"),
+    path("users/<int:pk>/delete/", views.UserDeleteView.as_view(), name="user_delete"),
     path("master-data/production-lines/", views.ProductionLineListView.as_view(), name="production_line_list"),
     path("master-data/production-lines/new/", views.ProductionLineCreateView.as_view(), name="production_line_create"),
     path("master-data/production-lines/<int:pk>/edit/", views.ProductionLineUpdateView.as_view(), name="production_line_update"),
@@ -33,4 +37,6 @@ urlpatterns = [
     path("master-data/test-conditions/<int:pk>/edit/", views.TestConditionUpdateView.as_view(), name="test_condition_update"),
     path("master-data/test-conditions/<int:pk>/delete/", views.TestConditionDeleteView.as_view(), name="test_condition_delete"),
 ]
+
+
 
