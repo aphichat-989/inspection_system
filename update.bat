@@ -73,6 +73,9 @@ echo [4/4] Service status:
 docker compose ps
 echo.
 echo SUCCESS: System updated and running at http://localhost:8000
+set "LAN_IP="
+for /f "tokens=2 delims=:" %%A in ('ipconfig ^| findstr /R /C:"IPv4 Address"') do if not defined LAN_IP for /f "tokens=* delims= " %%B in ("%%A") do set "LAN_IP=%%B"
+if defined LAN_IP echo LAN URL: http://%LAN_IP%:8000
 echo.
 pause
 exit /b 0

@@ -65,7 +65,9 @@ def env_list(name, default=None, required=False):
 load_env_file(BASE_DIR / ".env")
 
 DJANGO_ENV = env("DJANGO_ENV", "development").strip().lower()
-DEBUG = env_bool("DEBUG", required=True)
+DEBUG = env_bool("DJANGO_DEBUG")
+if DEBUG is None:
+    DEBUG = env_bool("DEBUG", required=True)
 IS_PRODUCTION = DJANGO_ENV == "production" or not DEBUG
 
 SECRET_KEY = env("DJANGO_SECRET_KEY", required=True)
@@ -82,9 +84,9 @@ INSTALLED_APPS = [
     "apps.inspection",
 ]
 
-LOGIN_URL = "admin:login"
+LOGIN_URL = "login"
 LOGIN_REDIRECT_URL = "inspection:dashboard"
-LOGOUT_REDIRECT_URL = "admin:login"
+LOGOUT_REDIRECT_URL = "login"
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
@@ -152,7 +154,7 @@ LANGUAGE_CODE = "th"
 TIME_ZONE = "Asia/Bangkok"
 USE_I18N = True
 LANGUAGES = [
-    ("th", "ไทย"),
+    ("th", "???"),
     ("en", "English"),
 ]
 USE_TZ = True
@@ -183,3 +185,4 @@ if env_bool("DJANGO_USE_X_FORWARDED_PROTO", True):
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+

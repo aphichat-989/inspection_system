@@ -11,7 +11,7 @@
 
 1. Clone repository
 2. Double-click `setup.bat`
-3. Open `http://localhost:8000`
+3. Open `http://localhost:8000` on the server machine, or `http://SERVER_LAN_IP:8000` from another computer on the same LAN
 
 `setup.bat` จะตรวจ Docker, สร้าง `.env` จาก `.env.example`, generate `DJANGO_SECRET_KEY` และ `DB_PASSWORD`, build/start containers, run migrations, collect static files, ตรวจ health check ที่ `/healthz/`, และเปิด browser อัตโนมัติ
 
@@ -40,7 +40,7 @@ docker compose exec web python manage.py migrate
 docker compose exec web python manage.py collectstatic --noinput
 ```
 
-4. Open `http://localhost:8000`
+4. Open `http://localhost:8000` on the server machine, or `http://SERVER_LAN_IP:8000` from another computer on the same LAN
 
 ## Troubleshooting
 
@@ -456,7 +456,7 @@ Docker deployments use `.env`, normally created from `.env.example`. The applica
 | `DJANGO_ENV` | Runtime environment name. Use `production` for Docker and server deployments. |
 | `DEBUG` | Enables or disables Django debug output. |
 | `DJANGO_SECRET_KEY` | Required Django signing key. Replace `CHANGE_ME` before startup. |
-| `ALLOWED_HOSTS` | Comma-separated hostnames or IPs allowed to serve the site. |
+| `ALLOWED_HOSTS` | Comma-separated hostnames or IPs allowed to serve the site. Use `*` for simple LAN deployments where clients connect by server IP. |
 | `DJANGO_CSRF_TRUSTED_ORIGINS` | Optional comma-separated trusted origins for CSRF validation. |
 | `DJANGO_SECURE_SSL_REDIRECT` | Redirect HTTP requests to HTTPS when enabled. |
 | `DJANGO_SESSION_COOKIE_SECURE` | Marks session cookies as HTTPS-only when enabled. |

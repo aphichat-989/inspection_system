@@ -43,6 +43,12 @@ from .views_sessions import (
     InspectionUpdateView,
     TestSessionContextMixin,
 )
+from .views_users import (
+    UserCreateView,
+    UserDeleteView,
+    UserListView,
+    UserUpdateView,
+)
 from .views_verification import (
     VerificationCreateView,
     VerificationDeleteView,
@@ -94,4 +100,10 @@ __all__ = [
     "TestConditionCreateView",
     "TestConditionUpdateView",
     "TestConditionDeleteView",
+    "UserListView",
+    "UserCreateView",
+    "UserUpdateView",
+    "UserDeleteView",
 ]
+
+

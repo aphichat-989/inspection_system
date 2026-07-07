@@ -12,14 +12,17 @@ Class-based views
     2. Add a URL to urlpatterns:  path('', Home.as_view(), name='home')
 Including another URLconf
     1. Import the include() function: from django.urls import include, path
+from apps.inspection.forms_auth import BootstrapAuthenticationForm
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 
 from django.contrib import admin
+from django.contrib.auth.views import LoginView, LogoutView
 from django.db import connection
 from django.http import JsonResponse
 from django.shortcuts import redirect
 from django.urls import include, path
+from apps.inspection.forms_auth import BootstrapAuthenticationForm
 
 
 def home_redirect(request):
@@ -35,7 +38,11 @@ def healthz(request):
 
 urlpatterns = [
     path("healthz/", healthz, name="healthz"),
+    path("accounts/login/", LoginView.as_view(template_name="registration/login.html", authentication_form=BootstrapAuthenticationForm, redirect_authenticated_user=True), name="login"),
+    path("accounts/logout/", LogoutView.as_view(), name="logout"),
     path("", home_redirect, name="home"),
     path("admin/", admin.site.urls),
     path("inspection/", include(("apps.inspection.urls", "inspection"), namespace="inspection")),
 ]
+
+

@@ -1,16 +1,17 @@
-﻿from io import BytesIO
+from io import BytesIO
 
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db import transaction
 from django.db.models import Count, Prefetch, Q
-from django.http import HttpResponse, HttpResponseBadRequest, HttpResponseRedirect
+from django.http import Http404, HttpResponse, HttpResponseBadRequest, HttpResponseRedirect
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
 from django.views import View
 from django.views.generic import CreateView, DeleteView, DetailView, ListView, UpdateView
 from openpyxl import Workbook
-from openpyxl.styles import Font
+from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
+from openpyxl.utils import get_column_letter
 
 from .forms import TestSessionForm
 from .models import DefectType, InspectionRound, InspectionSession, InspectionTest, Inspector
@@ -76,6 +77,7 @@ class InspectionSessionExportView(LoginRequiredMixin, TestSessionListQuerysetMix
         "Overall Comment",
         "Created At",
     ]
+    report_table_headers = ["Defect", "Round", "Planned Round", "Result", "Inspection Time", "Comment"]
 
     def get_queryset(self):
         return self.get_filtered_queryset().annotate(
@@ -88,6 +90,34 @@ class InspectionSessionExportView(LoginRequiredMixin, TestSessionListQuerysetMix
         )
 
     def get(self, request, *args, **kwargs):
+        session_id = request.GET.get("session_id")
+        if session_id:
+            session = self.get_report_session(session_id)
+            workbook = self.build_report_workbook(session)
+            filename = f"inspection_report_{session.session_number}_{timezone.localtime().strftime('%Y%m%d_%H%M%S')}.xlsx"
+            return self.build_response(workbook, filename)
+
+        workbook = self.build_sessions_workbook()
+        filename = f"inspection_sessions_{timezone.localtime().strftime('%Y%m%d_%H%M%S')}.xlsx"
+        return self.build_response(workbook, filename)
+
+    def get_report_session(self, session_id):
+        try:
+            return InspectionSession.objects.select_related("line", "test_condition", "inspector").prefetch_related(
+                Prefetch(
+                    "tests",
+                    queryset=InspectionTest.objects.select_related("defect_type").prefetch_related(
+                        Prefetch(
+                            "rounds",
+                            queryset=InspectionRound.objects.select_related("result_type").order_by("round_number", "created_at"),
+                        )
+                    ),
+                )
+            ).get(pk=session_id)
+        except (InspectionSession.DoesNotExist, ValueError):
+            raise Http404("Inspection session was not found")
+
+    def build_sessions_workbook(self):
         workbook = Workbook()
         worksheet = workbook.active
         worksheet.title = "Test Sessions"
@@ -103,9 +133,9 @@ class InspectionSessionExportView(LoginRequiredMixin, TestSessionListQuerysetMix
                 [
                     session.session_number,
                     session.inspection_date,
-                    session.line.name,
-                    session.inspector.name,
-                    session.test_condition.name,
+                    session.line.name if session.line_id else "-",
+                    session.inspector.name if session.inspector_id else "-",
+                    session.test_condition.name if session.test_condition_id else "-",
                     session.get_status_display(),
                     session.defect_test_count,
                     session.completed_test_count,
@@ -118,21 +148,214 @@ class InspectionSessionExportView(LoginRequiredMixin, TestSessionListQuerysetMix
             row[0].number_format = "yyyy-mm-dd"
         for row in worksheet.iter_rows(min_row=2, min_col=10, max_col=10):
             row[0].number_format = "yyyy-mm-dd hh:mm:ss"
+        self.autosize_columns(worksheet)
+        return workbook
 
-        for column_cells in worksheet.columns:
+    def build_report_workbook(self, session):
+        workbook = Workbook()
+        worksheet = workbook.active
+        worksheet.title = "Inspection Report"
+
+        title_row = 1
+        worksheet.merge_cells(start_row=title_row, start_column=1, end_row=title_row, end_column=7)
+        title_cell = worksheet.cell(row=title_row, column=1, value="Inspection Session Summary")
+        title_cell.font = Font(bold=True, size=16)
+        title_cell.alignment = Alignment(horizontal="center")
+
+        tests = list(session.tests.all())
+        summaries = [test_summary(test) for test in tests]
+
+        session_rows = [
+            ("Session Number", self.safe_value(session.session_number)),
+            ("Date", session.inspection_date.strftime("%d/%m/%Y") if session.inspection_date else "-"),
+            ("Line", self.safe_value(session.line.name if session.line_id else None)),
+            ("Inspection Type", self.safe_value(session.test_condition.name if session.test_condition_id else None)),
+            ("Inspector", self.safe_value(session.inspector.name if session.inspector_id else None)),
+        ]
+        current_row = 3
+        for label, value in session_rows:
+            self.write_key_value_row(worksheet, current_row, label, value)
+            current_row += 1
+
+        current_row += 1
+        self.write_section_header(worksheet, current_row, "Defect Summary", 7)
+        summary_header_row = current_row + 1
+        summary_headers = ["Defect", "Planned Rounds", "Completed Rounds", "FOUND", "NOT_FOUND", "Status", "Reason"]
+        self.write_table_headers(worksheet, summary_header_row, summary_headers)
+        current_row = summary_header_row + 1
+        for summary in summaries:
+            worksheet.append(
+                [
+                    self.get_test_display_name(summary["test"]),
+                    summary["total_rounds"],
+                    summary["completed"],
+                    summary["found"],
+                    summary["not_found"],
+                    "Finished" if summary["is_finished"] else "In Progress",
+                    self.safe_value(summary["stop_reason"]),
+                ]
+            )
+            current_row += 1
+        summary_last_row = max(current_row - 1, summary_header_row)
+        self.style_table(worksheet, summary_header_row, summary_last_row, len(summary_headers))
+
+        current_row += 1
+        self.write_section_header(worksheet, current_row, "Overall Comment", 7)
+        self.write_key_value_row(worksheet, current_row + 1, "Comment", self.safe_value(session.overall_comment))
+
+        current_row += 3
+        self.write_section_header(worksheet, current_row, "Round History", len(self.report_table_headers))
+        table_header_row = current_row + 1
+        self.write_table_headers(worksheet, table_header_row, self.report_table_headers)
+
+        data_start_row = table_header_row + 1
+        current_row = data_start_row
+        for test in tests:
+            defect_name = self.get_test_display_name(test)
+            for round_item in test.rounds.all():
+                inspection_time = timezone.localtime(round_item.created_at).replace(tzinfo=None) if round_item.created_at else None
+                result = self.safe_value(round_item.result_type.name if round_item.result_type_id else None)
+                worksheet.append(
+                    [
+                        defect_name,
+                        f"Round {round_item.round_number}",
+                        f"{round_item.round_number} / {test.total_rounds}",
+                        result,
+                        inspection_time,
+                        self.safe_value(round_item.comment),
+                    ]
+                )
+                current_row += 1
+
+        last_data_row = max(current_row - 1, table_header_row)
+        worksheet.freeze_panes = f"A{data_start_row}"
+        last_column_letter = get_column_letter(len(self.report_table_headers))
+        worksheet.auto_filter.ref = f"A{table_header_row}:{last_column_letter}{last_data_row}"
+        self.style_report_table(worksheet, table_header_row, last_data_row)
+        self.autosize_columns(worksheet)
+        self.set_report_column_widths(worksheet)
+        return workbook
+
+    def write_section_header(self, worksheet, row, title, end_column):
+        worksheet.merge_cells(start_row=row, start_column=1, end_row=row, end_column=end_column)
+        cell = worksheet.cell(row=row, column=1, value=title)
+        cell.font = Font(bold=True, size=13, color="FFFFFF")
+        cell.fill = PatternFill(fill_type="solid", fgColor="1F4E78")
+        cell.alignment = Alignment(horizontal="left")
+
+    def write_key_value_row(self, worksheet, row, label, value):
+        label_cell = worksheet.cell(row=row, column=1, value=label)
+        value_cell = worksheet.cell(row=row, column=2, value=value)
+        label_cell.font = Font(bold=True)
+        label_cell.alignment = Alignment(horizontal="left")
+        value_cell.alignment = Alignment(horizontal="left", wrap_text=True)
+
+    def write_table_headers(self, worksheet, row, headers):
+        for column_index, header in enumerate(headers, start=1):
+            cell = worksheet.cell(row=row, column=column_index, value=header)
+            cell.font = Font(bold=True, color="FFFFFF")
+            cell.fill = PatternFill(fill_type="solid", fgColor="000000")
+            cell.alignment = Alignment(horizontal="center", vertical="center")
+
+    def style_table(self, worksheet, header_row, last_row, last_column):
+        border_side = Side(style="thin", color="D9E2EC")
+        border = Border(left=border_side, right=border_side, top=border_side, bottom=border_side)
+        for row in worksheet.iter_rows(min_row=header_row, max_row=last_row, min_col=1, max_col=last_column):
+            for cell in row:
+                cell.border = border
+                cell.alignment = Alignment(horizontal="left", vertical="center", wrap_text=True)
+        for row in worksheet.iter_rows(min_row=header_row + 1, max_row=last_row, min_col=2, max_col=5):
+            for cell in row:
+                cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+    def style_report_table(self, worksheet, table_header_row, last_data_row):
+        last_column = len(self.report_table_headers)
+        dark_fill = PatternFill(fill_type="solid", fgColor="000000")
+        dark_border_side = Side(style="thin", color="1F1F1F")
+        dark_border = Border(
+            left=dark_border_side,
+            right=dark_border_side,
+            top=dark_border_side,
+            bottom=dark_border_side,
+        )
+        header_font = Font(bold=True, color="FFFFFF")
+        body_font = Font(color="FFFFFF")
+
+        for row in worksheet.iter_rows(min_row=table_header_row, max_row=last_data_row, min_col=1, max_col=last_column):
+            for cell in row:
+                cell.fill = dark_fill
+                cell.border = dark_border
+                cell.font = body_font
+                cell.alignment = Alignment(horizontal="left", vertical="center", wrap_text=True)
+
+        for cell in worksheet[table_header_row][:last_column]:
+            cell.font = header_font
+            cell.alignment = Alignment(horizontal="center", vertical="center")
+
+        for row in worksheet.iter_rows(min_row=table_header_row + 1, max_row=last_data_row, min_col=2, max_col=4):
+            for cell in row:
+                cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+
+        for row in worksheet.iter_rows(min_row=table_header_row + 1, max_row=last_data_row, min_col=5, max_col=5):
+            for cell in row:
+                cell.number_format = "yyyy-mm-dd hh:mm:ss"
+                cell.alignment = Alignment(horizontal="center", vertical="center")
+
+        for row in worksheet.iter_rows(min_row=table_header_row + 1, max_row=last_data_row, min_col=1, max_col=1):
+            for cell in row:
+                cell.alignment = Alignment(horizontal="left", vertical="center", wrap_text=True)
+
+        for row in worksheet.iter_rows(min_row=table_header_row + 1, max_row=last_data_row, min_col=6, max_col=6):
+            for cell in row:
+                cell.alignment = Alignment(horizontal="left", vertical="center", wrap_text=True)
+
+        for row_index in range(table_header_row, last_data_row + 1):
+            worksheet.row_dimensions[row_index].height = 28
+
+    def set_report_column_widths(self, worksheet):
+        minimum_widths = {
+            "A": 24,
+            "B": 14,
+            "C": 18,
+            "D": 18,
+            "E": 28,
+            "F": 28,
+        }
+        for column_letter, width in minimum_widths.items():
+            worksheet.column_dimensions[column_letter].width = max(
+                worksheet.column_dimensions[column_letter].width or 0,
+                width,
+            )
+
+    def autosize_columns(self, worksheet):
+        for column_index, column_cells in enumerate(worksheet.columns, start=1):
             max_length = max(len(str(cell.value or "")) for cell in column_cells)
-            worksheet.column_dimensions[column_cells[0].column_letter].width = min(max(max_length + 2, 12), 60)
+            column_letter = get_column_letter(column_index)
+            worksheet.column_dimensions[column_letter].width = min(max(max_length + 2, 12), 60)
 
+    def format_result(self, value):
+        normalized = self.safe_value(value)
+        if normalized == "-":
+            return "-"
+        return normalized.upper().replace(" ", "_")
+
+    def safe_value(self, value):
+        if value is None:
+            return "-"
+        value = str(value).strip()
+        return value or "-"
+
+    def get_test_display_name(self, test):
+        return self.safe_value(test.defect_type.name if test.defect_type_id else test.test_name)
+
+    def build_response(self, workbook, filename):
         output = BytesIO()
         workbook.save(output)
-        filename = f"inspection_sessions_{timezone.localtime().strftime('%Y%m%d_%H%M%S')}.xlsx"
         response = HttpResponse(
             output.getvalue(),
             content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         )
         response["Content-Disposition"] = f'attachment; filename="{filename}"'
         return response
-
 
 class TestSessionContextMixin:
     def get_defect_context(self, form=None):
@@ -352,5 +575,6 @@ class InspectionDeleteView(LoginRequiredMixin, DeleteView):
     def form_valid(self, form):
         messages.success(self.request, "Test Session deleted.")
         return super().form_valid(form)
+
 
 

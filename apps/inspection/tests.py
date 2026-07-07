@@ -1,12 +1,14 @@
 from datetime import date
 from io import BytesIO
 
+from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
 from openpyxl import load_workbook
 
 from .models import (
     DefectType,
+    InspectionResultType,
     InspectionRound,
     InspectionSession,
     InspectionTest,
@@ -22,6 +24,8 @@ class InspectionWorkflowTests(TestCase):
         self.line = ProductionLine.objects.create(name="Line A")
         self.condition = TestCondition.objects.create(name="Normal Light")
         self.inspector = Inspector.objects.create(name="Inspector A")
+        self.user = get_user_model().objects.create_user(username="tester", password="pass")
+        self.client.force_login(self.user)
         self.defect = DefectType.objects.create(name="Scratch")
 
     def create_session_with_test(self, total_rounds=30):
@@ -86,6 +90,124 @@ class InspectionWorkflowTests(TestCase):
         workbook = load_workbook(BytesIO(response.content))
         return response, workbook.active
 
+    def test_detail_export_uses_session_report_workbook_with_defect_rows(self):
+        session = InspectionSession.objects.create(
+            session_number="TS20260703-9001",
+            inspection_date=date(2026, 7, 3),
+            line=self.line,
+            test_condition=self.condition,
+            inspector=self.inspector,
+            status=InspectionSession.STATUS_COMPLETED,
+            overall_comment="checked on line",
+        )
+        alpha_defect = DefectType.objects.create(name="Alpha Defect")
+        beta_defect = DefectType.objects.create(name="Beta Defect")
+        alpha_test = InspectionTest.objects.create(
+            session=session,
+            defect_type=alpha_defect,
+            test_name=str(alpha_defect.pk),
+            total_rounds=2,
+            completed_rounds=1,
+            status=InspectionTest.STATUS_IN_PROGRESS,
+        )
+        beta_test = InspectionTest.objects.create(
+            session=session,
+            defect_type=beta_defect,
+            test_name=str(beta_defect.pk),
+            total_rounds=3,
+            completed_rounds=1,
+            status=InspectionTest.STATUS_IN_PROGRESS,
+        )
+        found = InspectionResultType.objects.create(name="Found")
+        not_found = InspectionResultType.objects.create(name="Not Found")
+        InspectionRound.objects.create(inspection_test=alpha_test, round_number=1, result_type=found, comment="alpha note")
+        InspectionRound.objects.create(inspection_test=beta_test, round_number=1, result_type=not_found, comment="beta note")
+
+        response, sheet = self.export_workbook(f"session_id={session.pk}")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertRegex(
+            response["Content-Disposition"],
+            r'^attachment; filename="inspection_report_TS20260703-9001_\d{8}_\d{6}\.xlsx"$',
+        )
+        self.assertEqual(sheet.title, "Inspection Report")
+        self.assertEqual(sheet["A1"].value, "Inspection Session Summary")
+        self.assertEqual(sheet["A3"].value, "Session Number")
+        self.assertEqual(sheet["B3"].value, "TS20260703-9001")
+        self.assertEqual(sheet["A4"].value, "Date")
+        self.assertEqual(sheet["B4"].value, "03/07/2026")
+        self.assertEqual(sheet["A5"].value, "Line")
+        self.assertEqual(sheet["B5"].value, "Line A")
+        self.assertEqual(sheet["A6"].value, "Inspection Type")
+        self.assertEqual(sheet["B6"].value, "Normal Light")
+        self.assertEqual(sheet["A7"].value, "Inspector")
+        self.assertEqual(sheet["B7"].value, "Inspector A")
+        self.assertEqual(sheet["A9"].value, "Defect Summary")
+        self.assertEqual([cell.value for cell in sheet[10]], [
+            "Defect",
+            "Planned Rounds",
+            "Completed Rounds",
+            "FOUND",
+            "NOT_FOUND",
+            "Status",
+            "Reason",
+        ])
+        self.assertEqual([sheet["A11"].value, sheet["B11"].value, sheet["C11"].value, sheet["D11"].value, sheet["E11"].value, sheet["F11"].value, sheet["G11"].value], [
+            "Alpha Defect",
+            2,
+            1,
+            1,
+            0,
+            "In Progress",
+            "-",
+        ])
+        self.assertEqual([sheet["A12"].value, sheet["B12"].value, sheet["C12"].value, sheet["D12"].value, sheet["E12"].value, sheet["F12"].value, sheet["G12"].value], [
+            "Beta Defect",
+            3,
+            1,
+            0,
+            1,
+            "In Progress",
+            "-",
+        ])
+        self.assertEqual(sheet["A14"].value, "Overall Comment")
+        self.assertEqual(sheet["A15"].value, "Comment")
+        self.assertEqual(sheet["B15"].value, "checked on line")
+        self.assertEqual(sheet["A17"].value, "Round History")
+        self.assertEqual([cell.value for cell in sheet[18][:6]], [
+            "Defect",
+            "Round",
+            "Planned Round",
+            "Result",
+            "Inspection Time",
+            "Comment",
+        ])
+        self.assertEqual([sheet["A19"].value, sheet["B19"].value, sheet["C19"].value, sheet["D19"].value, sheet["F19"].value], [
+            "Alpha Defect",
+            "Round 1",
+            "1 / 2",
+            "Found",
+            "alpha note",
+        ])
+        self.assertEqual([sheet["A20"].value, sheet["B20"].value, sheet["C20"].value, sheet["D20"].value, sheet["F20"].value], [
+            "Beta Defect",
+            "Round 1",
+            "1 / 3",
+            "Not Found",
+            "beta note",
+        ])
+        self.assertEqual(sheet.freeze_panes, "A19")
+        self.assertEqual(sheet.auto_filter.ref, "A18:F20")
+        self.assertEqual(sheet["E19"].number_format, "yyyy-mm-dd hh:mm:ss")
+
+    def test_detail_page_export_button_targets_session_export_endpoint(self):
+        session, _ = self.create_session_with_test(total_rounds=5)
+
+        response = self.client.get(reverse("inspection:detail", kwargs={"pk": session.pk}))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, f'{reverse("inspection:session_export")}?session_id={session.pk}')
+
     def test_create_session_does_not_precreate_rounds(self):
         response = self.client.post(
             reverse("inspection:create"),
@@ -104,6 +226,7 @@ class InspectionWorkflowTests(TestCase):
         test = InspectionTest.objects.get(defect_type=self.defect)
         self.assertEqual(test.total_rounds, 30)
         self.assertEqual(test.rounds.count(), 0)
+
 
     def test_detail_displays_only_current_round_without_creating_database_rows(self):
         session, test = self.create_session_with_test(total_rounds=30)
