@@ -28,6 +28,8 @@ staticfiles/
 .env.*
 !.env.example
 !.env.production.example
+backup.sql
+*.xlsx
 
 # Logs
 *.log
