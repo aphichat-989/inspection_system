@@ -1,0 +1,84 @@
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+
+services:
+  web:
+    build: .
+    restart: unless-stopped
+    env_file:
+      - ${ENV_FILE:-.env.production}
+    ports:
+      - "${APP_BIND_IP:-127.0.0.1}:${APP_PORT:-8000}:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - staticfiles:/app/staticfiles
+      - media:/app/media
+    networks:
+      - inspection_backend
+    logging: *default-logging
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz/', timeout=5).read()\""]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 45s
+
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:?DB_NAME is required}
+      POSTGRES_USER: ${DB_USER:?DB_USER is required}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ${BACKUP_DIR:-./backups}:/backups
+    networks:
+      - inspection_backend
+    logging: *default-logging
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  pgadmin:
+    image: dpage/pgadmin4:8.14
+    restart: unless-stopped
+    profiles:
+      - admin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:?PGADMIN_DEFAULT_EMAIL is required}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:?PGADMIN_DEFAULT_PASSWORD is required}
+    ports:
+      - "${PGADMIN_BIND_IP:-127.0.0.1}:${PGADMIN_PORT:-5050}:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - inspection_backend
+    logging: *default-logging
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1/misc/ping || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 45s
+
+volumes:
+  postgres_data:
+  staticfiles:
+  media:
+  pgadmin_data:
+
+networks:
+  inspection_backend:
+    driver: bridge
