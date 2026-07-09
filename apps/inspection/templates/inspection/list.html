@@ -13,7 +13,7 @@
             <p class="page-subtitle">Search, continue, and review defect detection test sessions.</p>
         </div>
         <div class="d-flex gap-2 flex-wrap justify-content-end">
-            <a href="{% url 'inspection:session_export' %}{% if request.GET.urlencode %}?{{ request.GET.urlencode }}{% endif %}" class="btn btn-outline-success btn-lg btn-icon"><i class="bi bi-file-earmark-excel"></i>Export Excel</a>
+{% if request.user.is_staff %}<a href="{% url 'inspection:session_export' %}{% if request.GET.urlencode %}?{{ request.GET.urlencode }}{% endif %}" class="btn btn-outline-success btn-lg btn-icon"><i class="bi bi-file-earmark-excel"></i>Export Excel</a>{% endif %}
             <a href="{% url 'inspection:create' %}" class="btn btn-primary btn-lg btn-icon"><i class="bi bi-plus-circle"></i>New Test Session</a>
         </div>
     </div>
@@ -36,16 +36,16 @@
             <div><h5 class="mb-1 fw-bold">Session Log</h5><p class="text-muted small mb-0">Latest test sessions first</p></div>
             <div class="d-flex gap-2 flex-wrap justify-content-end">
                 <span class="chip session-total-chip"><i class="bi bi-database"></i>ทั้งหมด {{ paginator.count }} รายการ</span>
-                <button type="submit" class="btn btn-outline-danger btn-sm btn-icon" data-bulk-delete-button disabled><i class="bi bi-trash"></i>ลบรายการที่เลือก</button>
+{% if request.user.is_staff %}<button type="submit" class="btn btn-outline-danger btn-sm btn-icon" data-bulk-delete-button disabled><i class="bi bi-trash"></i>ลบรายการที่เลือก</button>{% endif %}
             </div>
         </div>
         <div class="session-table-scroll">
             <table class="table table-modern table-hover align-middle">
-                <thead><tr><th class="bulk-select-cell"><input class="form-check-input" type="checkbox" data-select-all-sessions aria-label="Select all sessions"></th><th class="row-number">ลำดับ</th><th>Session</th><th>Date</th><th>Line</th><th>Condition</th><th>Inspector</th><th>Status</th><th class="text-end">Action</th></tr></thead>
+                <thead><tr>{% if request.user.is_staff %}<th class="bulk-select-cell"><input class="form-check-input" type="checkbox" data-select-all-sessions aria-label="Select all sessions"></th>{% endif %}<th class="row-number">ลำดับ</th><th>Session</th><th>Date</th><th>Line</th><th>Condition</th><th>Inspector</th><th>Status</th><th class="text-end">Action</th></tr></thead>
                 <tbody>
                     {% for session in sessions %}
                     <tr>
-                        <td class="bulk-select-cell"><input class="form-check-input" type="checkbox" name="selected_sessions" value="{{ session.pk }}" data-session-checkbox aria-label="Select {{ session.session_number }}"></td>
+{% if request.user.is_staff %}<td class="bulk-select-cell"><input class="form-check-input" type="checkbox" name="selected_sessions" value="{{ session.pk }}" data-session-checkbox aria-label="Select {{ session.session_number }}"></td>{% endif %}
                         <td class="row-number">{% if page_obj %}{{ page_obj.start_index|add:forloop.counter0 }}{% else %}{{ forloop.counter }}{% endif %}</td>
                         <td class="fw-bold">{{ session.session_number }}</td>
                         <td>{{ session.inspection_date }}</td>

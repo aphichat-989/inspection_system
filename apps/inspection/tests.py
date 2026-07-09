@@ -24,7 +24,7 @@ class InspectionWorkflowTests(TestCase):
         self.line = ProductionLine.objects.create(name="Line A")
         self.condition = TestCondition.objects.create(name="Normal Light")
         self.inspector = Inspector.objects.create(name="Inspector A")
-        self.user = get_user_model().objects.create_user(username="tester", password="pass")
+        self.user = get_user_model().objects.create_user(username="tester", password="pass", is_staff=True)
         self.client.force_login(self.user)
         self.defect = DefectType.objects.create(name="Scratch")
 
@@ -226,6 +226,8 @@ class InspectionWorkflowTests(TestCase):
         test = InspectionTest.objects.get(defect_type=self.defect)
         self.assertEqual(test.total_rounds, 30)
         self.assertEqual(test.rounds.count(), 0)
+        session.refresh_from_db()
+        self.assertEqual(session.inspector.name, "tester")
 
 
     def test_detail_displays_only_current_round_without_creating_database_rows(self):

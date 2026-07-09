@@ -19,42 +19,51 @@ class TestSessionForm(forms.ModelForm):
         disabled=True,
         widget=forms.TextInput(attrs={"class": "form-control form-control-lg", "readonly": "readonly"}),
     )
+    inspector_name = forms.CharField(
+        label="Inspector",
+        required=False,
+        disabled=True,
+        widget=forms.TextInput(attrs={"class": "form-control form-control-lg", "readonly": "readonly"}),
+    )
 
     def __init__(self, *args, **kwargs):
         session_number = kwargs.pop("session_number", "")
+        user = kwargs.pop("user", None)
         super().__init__(*args, **kwargs)
         if not self.instance.pk:
             self.initial.setdefault("inspection_date", datetime.now().date().strftime("%Y-%m-%d"))
         self.initial.setdefault("session_number", self.instance.session_number or session_number)
+        inspector_name = ""
+        if user and user.is_authenticated:
+            inspector_name = user.get_full_name() or user.username
+        elif self.instance.pk and self.instance.inspector_id:
+            inspector_name = self.instance.inspector.name
+        self.initial.setdefault("inspector_name", inspector_name)
         self.fields["line"].queryset = ProductionLine.objects.filter(is_active=True).order_by("name")
         self.fields["test_condition"].queryset = TestCondition.objects.filter(is_active=True).order_by("name")
-        self.fields["inspector"].queryset = Inspector.objects.filter(is_active=True).order_by("name")
         self.fields["line"].empty_label = "Select production line"
         self.fields["test_condition"].empty_label = "Select test condition"
-        self.fields["inspector"].empty_label = "Select inspector"
 
     class Meta:
         model = InspectionSession
         fields = [
             "session_number",
+            "inspector_name",
             "inspection_date",
             "line",
             "test_condition",
-            "inspector",
             "overall_comment",
         ]
         labels = {
             "inspection_date": "Inspection Date",
             "line": "Production Line",
             "test_condition": "Test Condition",
-            "inspector": "Inspector",
             "overall_comment": "Overall Comment",
         }
         widgets = {
             "inspection_date": forms.DateInput(attrs={"type": "date", "class": "form-control form-control-lg"}),
             "line": forms.Select(attrs={"class": "form-select form-select-lg"}),
             "test_condition": forms.Select(attrs={"class": "form-select form-select-lg"}),
-            "inspector": forms.Select(attrs={"class": "form-select form-select-lg"}),
             "overall_comment": forms.Textarea(
                 attrs={
                     "class": "form-control",

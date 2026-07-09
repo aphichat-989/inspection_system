@@ -1,13 +1,13 @@
-﻿from django.contrib.auth.mixins import LoginRequiredMixin
-from django.urls import reverse_lazy
+﻿from django.urls import reverse_lazy
 from django.views.generic import CreateView, DeleteView, ListView, UpdateView
 
 from .forms import DefectTypeForm, InspectorForm, ProductionLineForm, TestConditionForm
 from .models import DefectType, Inspector, ProductionLine, TestCondition
 from .services import DashboardService
+from .views_permissions import StaffRequiredMixin
 
 
-class MasterDataListView(LoginRequiredMixin, ListView):
+class MasterDataListView(StaffRequiredMixin, ListView):
     template_name = "inspection/master_data_list.html"
     context_object_name = "items"
     page_title = ""
@@ -27,7 +27,7 @@ class MasterDataListView(LoginRequiredMixin, ListView):
         return context
 
 
-class MasterDataCreateView(LoginRequiredMixin, CreateView):
+class MasterDataCreateView(StaffRequiredMixin, CreateView):
     template_name = "inspection/master_data_form.html"
     page_title = ""
     success_url_name = ""
@@ -50,7 +50,7 @@ class MasterDataCreateView(LoginRequiredMixin, CreateView):
         return context
 
 
-class MasterDataUpdateView(LoginRequiredMixin, UpdateView):
+class MasterDataUpdateView(StaffRequiredMixin, UpdateView):
     template_name = "inspection/master_data_form.html"
     page_title = ""
     success_url_name = ""
@@ -73,7 +73,7 @@ class MasterDataUpdateView(LoginRequiredMixin, UpdateView):
         return context
 
 
-class MasterDataDeleteView(LoginRequiredMixin, DeleteView):
+class MasterDataDeleteView(StaffRequiredMixin, DeleteView):
     template_name = "inspection/master_data_confirm_delete.html"
     page_title = ""
     success_url_name = ""

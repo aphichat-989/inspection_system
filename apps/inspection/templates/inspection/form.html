@@ -16,7 +16,7 @@
     </div>
 
     <div class="setup-strip" aria-label="Test session setup steps">
-        <div class="setup-step"><span class="setup-step-icon"><i class="bi bi-clipboard2-check"></i></span><div><div class="fw-bold">1. Session</div><div class="text-muted small">Line, condition, inspector</div></div></div>
+        <div class="setup-step"><span class="setup-step-icon"><i class="bi bi-clipboard2-check"></i></span><div><div class="fw-bold">1. Session</div><div class="text-muted small">Line, condition, logged-in inspector</div></div></div>
         <div class="setup-step"><span class="setup-step-icon"><i class="bi bi-exclamation-diamond"></i></span><div><div class="fw-bold">2. Defects</div><div class="text-muted small">Pick active defect types</div></div></div>
         <div class="setup-step"><span class="setup-step-icon"><i class="bi bi-repeat"></i></span><div><div class="fw-bold">3. Rounds</div><div class="text-muted small">Create execution rounds automatically</div></div></div>
     </div>
@@ -24,12 +24,6 @@
     <form method="post" id="test-session-form">
         {% csrf_token %}
         {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
-        {% if not has_active_inspectors %}
-        <div class="alert alert-warning d-flex justify-content-between align-items-center gap-3 flex-wrap">
-            <div><i class="bi bi-person-plus me-1"></i>No active inspectors are available. Add an inspector before starting a test session.</div>
-            <a href="{% url 'inspection:inspector_create' %}" class="btn btn-warning btn-icon"><i class="bi bi-plus-circle"></i>Add Inspector</a>
-        </div>
-        {% endif %}
 
         <div class="factory-card mb-4">
             <div class="factory-card-header">
@@ -76,10 +70,10 @@
                     </div>
                     <div class="col-md-6 col-xl-4">
                         <div class="field-shell">
-                            <label class="form-label" for="{{ form.inspector.id_for_label }}"><span class="required-dot"></span>{{ form.inspector.label }}</label>
-                            {{ form.inspector }}
-                            <div class="form-text">Example: Somchai, Inspector A, QA Line 1.</div>
-                            {{ form.inspector.errors }}
+                            <label class="form-label" for="{{ form.inspector_name.id_for_label }}"><span class="required-dot"></span>{{ form.inspector_name.label }}</label>
+                            {{ form.inspector_name }}
+                            <div class="form-text">Automatically uses the account currently logged in.</div>
+                            {{ form.inspector_name.errors }}
                         </div>
                     </div>
                 </div>
@@ -97,7 +91,7 @@
             <div class="factory-card-body">
                 <div class="defect-toolbar">
                     <div class="text-muted small">Select at least one defect type. Use master data to add defects such as Spatter, Leak, Scratch, Gap, or Dent.</div>
-                    <a href="{% url 'inspection:defect_type_create' %}" class="btn btn-outline-primary btn-sm btn-icon"><i class="bi bi-plus-circle"></i>Add Defect Type</a>
+{% if request.user.is_staff %}<a href="{% url 'inspection:defect_type_create' %}" class="btn btn-outline-primary btn-sm btn-icon"><i class="bi bi-plus-circle"></i>Add Defect Type</a>{% endif %}
                 </div>
                 <div class="row g-3">
                     {% for item in defect_cards %}

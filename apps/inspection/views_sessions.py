@@ -15,6 +15,7 @@ from openpyxl.utils import get_column_letter
 
 from .forms import TestSessionForm
 from .models import DefectType, InspectionRound, InspectionSession, InspectionTest, Inspector
+from .views_permissions import StaffRequiredMixin
 from .views_helpers import (
     AUTO_COMPLETED_MESSAGE,
     build_next_session_number,
@@ -64,7 +65,7 @@ class InspectionListView(LoginRequiredMixin, TestSessionListQuerysetMixin, ListV
         return context
 
 
-class InspectionSessionExportView(LoginRequiredMixin, TestSessionListQuerysetMixin, View):
+class InspectionSessionExportView(StaffRequiredMixin, TestSessionListQuerysetMixin, View):
     headers = [
         "Session Number",
         "Inspection Date",
@@ -357,7 +358,20 @@ class InspectionSessionExportView(LoginRequiredMixin, TestSessionListQuerysetMix
         response["Content-Disposition"] = f'attachment; filename="{filename}"'
         return response
 
+def get_logged_in_inspector(user):
+    name = user.get_full_name() or user.username
+    inspector, _ = Inspector.objects.update_or_create(
+        name=name,
+        defaults={"is_active": True},
+    )
+    return inspector
+
 class TestSessionContextMixin:
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs["user"] = self.request.user
+        return kwargs
+
     def get_defect_context(self, form=None):
         active_defects = DefectType.objects.filter(is_active=True).order_by("name")
         selected_ids = set(self.request.POST.getlist("defects"))
@@ -408,6 +422,7 @@ class InspectionCreateView(LoginRequiredMixin, TestSessionContextMixin, CreateVi
             return self.form_invalid(form)
 
         self.object = form.save(commit=False)
+        self.object.inspector = get_logged_in_inspector(self.request.user)
         self.object.session_number = build_next_session_number()
         self.object.status = InspectionSession.STATUS_IN_PROGRESS
         self.object.save()
@@ -434,6 +449,7 @@ class InspectionUpdateView(LoginRequiredMixin, TestSessionContextMixin, UpdateVi
 
     @transaction.atomic
     def form_valid(self, form):
+        form.instance.inspector = get_logged_in_inspector(self.request.user)
         self.object = form.save()
         selected_defects = DefectType.objects.filter(pk__in=self.request.POST.getlist("defects"), is_active=True)
         existing_tests = {test.defect_type_id: test for test in self.object.tests.select_related("defect_type") if test.defect_type_id}
@@ -547,7 +563,7 @@ class InspectionDetailView(LoginRequiredMixin, DetailView):
         return context
 
 
-class InspectionBulkDeleteView(LoginRequiredMixin, View):
+class InspectionBulkDeleteView(StaffRequiredMixin, View):
     success_url = reverse_lazy("inspection:list")
 
     def post(self, request, *args, **kwargs):
@@ -567,7 +583,7 @@ class InspectionBulkDeleteView(LoginRequiredMixin, View):
         return HttpResponseRedirect(self.success_url)
 
 
-class InspectionDeleteView(LoginRequiredMixin, DeleteView):
+class InspectionDeleteView(StaffRequiredMixin, DeleteView):
     model = InspectionSession
     template_name = "inspection/confirm_delete.html"
     success_url = reverse_lazy("inspection:list")
